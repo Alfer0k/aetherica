@@ -24,19 +24,21 @@ export const onRequestGet = async ({ params, env }) => {
 
   if (!row) return Response.json({ error: 'Not found.' }, { status: 404 });
 
-  // "next" = newer than current (browsing toward present). "prev" = older.
+  // Gallery sorts newest-first, so reading order is newest → oldest.
+  //   next = next-in-reading-order = OLDER image
+  //   prev = previous-in-reading-order = NEWER image
   // Compound (created_at, id) tie-break so ordering is total even on same timestamp.
   const next = await env.DB.prepare(
     `SELECT id FROM images
-      WHERE (created_at > ?) OR (created_at = ? AND id > ?)
-      ORDER BY created_at ASC, id ASC
+      WHERE (created_at < ?) OR (created_at = ? AND id < ?)
+      ORDER BY created_at DESC, id DESC
       LIMIT 1`
   ).bind(row.created_at, row.created_at, row.id).first();
 
   const prev = await env.DB.prepare(
     `SELECT id FROM images
-      WHERE (created_at < ?) OR (created_at = ? AND id < ?)
-      ORDER BY created_at DESC, id DESC
+      WHERE (created_at > ?) OR (created_at = ? AND id > ?)
+      ORDER BY created_at ASC, id ASC
       LIMIT 1`
   ).bind(row.created_at, row.created_at, row.id).first();
 
