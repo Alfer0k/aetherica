@@ -1,5 +1,8 @@
 // Aetherica image detail page — loads /api/aetherica/images/:id and renders
-// the big image, metadata, tags, and prev/next links.
+// the big image, metadata, tags, like button, and prev/next links.
+// Respects two filters:
+//   - NSFW visibility from localStorage (default "on")
+//   - Tag filter from ?tag= URL param (carried into prev/next URLs and API call)
 
 const R2_PUBLIC_URL = 'https://pub-db6629ddb8a843f48242c0317002614e.r2.dev';
 
@@ -16,8 +19,19 @@ const prevLink      = document.getElementById('aeth-prev');
 const nextLink      = document.getElementById('aeth-next');
 const likeBtn       = document.getElementById('aeth-like-btn');
 const likeCount     = document.getElementById('aeth-like-count');
+const toggleBtn     = document.getElementById('aeth-nsfw-toggle');
+const backLink      = document.getElementById('aeth-back');
 
 const LIKED_KEY = 'aeth_liked_ids';
+const NSFW_KEY  = 'aeth_show_nsfw';
+
+function nsfwOn() {
+  return (localStorage.getItem(NSFW_KEY) || 'on') === 'on';
+}
+
+function getActiveTag() {
+  return new URLSearchParams(window.location.search).get('tag') || null;
+}
 
 function getLikedIds() {
   try {
@@ -44,17 +58,39 @@ function formatDate(unix) {
   return d.toISOString().slice(0, 10);
 }
 
+function renderToggle() {
+  if (!toggleBtn) return;
+  const on = nsfwOn();
+  toggleBtn.dataset.state = on ? 'on' : 'off';
+  toggleBtn.textContent = on ? 'NSFW' : 'SFW';
+  toggleBtn.title = on ? 'Showing NSFW images — click to hide' : 'NSFW hidden — click to show';
+}
+
+function buildDetailHref(id) {
+  const tag = getActiveTag();
+  const params = new URLSearchParams();
+  params.set('id', String(id));
+  if (tag) params.set('tag', tag);
+  return `/aetherica/image?${params.toString()}`;
+}
+
+function buildGalleryHref() {
+  const tag = getActiveTag();
+  return tag ? `/aetherica/?tag=${encodeURIComponent(tag)}` : '/aetherica/';
+}
+
 function renderTags(tags) {
   tagsEl.innerHTML = '';
   if (!tags || !tags.length) return;
   tags.forEach(t => {
-    const chip = document.createElement('span');
+    const a = document.createElement('a');
     const label = t.namespace ? `${t.namespace}:${t.name}` : t.name;
-    chip.className = t.namespace
+    a.className = t.namespace
       ? `aeth-detail__tag aeth-detail__tag--ns-${t.namespace}`
       : 'aeth-detail__tag';
-    chip.textContent = label;
-    tagsEl.appendChild(chip);
+    a.textContent = label;
+    a.href = `/aetherica/?tag=${encodeURIComponent(label)}`;
+    tagsEl.appendChild(a);
   });
 }
 
@@ -73,10 +109,17 @@ async function load() {
 
   setState('loading');
 
+  // Keep the back link in sync with whatever filter is active.
+  if (backLink) backLink.href = buildGalleryHref();
+
   try {
-    const res = await fetch(`/api/aetherica/images/${id}`, {
-      headers: { 'Accept': 'application/json' },
-    });
+    const params = new URLSearchParams();
+    if (!nsfwOn()) params.set('nsfw', 'off');
+    const tag = getActiveTag();
+    if (tag) params.set('tag', tag);
+
+    const url = `/api/aetherica/images/${id}${params.toString() ? `?${params}` : ''}`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     if (res.status === 404) { setState('notfound'); return; }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -100,8 +143,6 @@ async function load() {
     metaEl.textContent = metaParts.join(' · ');
 
     // Likes UI — count from server, "liked" state hint from localStorage.
-    // If localStorage says we already liked this, disable the button so we
-    // don't fire useless POSTs that the server will just 409.
     likeCount.textContent = img.likes_count ?? 0;
     likeBtn.dataset.id = img.id;
     const alreadyLiked = getLikedIds().has(img.id);
@@ -120,19 +161,18 @@ async function load() {
 
     if (data.prev_id) {
       prevLink.hidden = false;
-      prevLink.href = `/aetherica/image?id=${data.prev_id}`;
+      prevLink.href = buildDetailHref(data.prev_id);
     } else {
       prevLink.hidden = true;
     }
 
     if (data.next_id) {
       nextLink.hidden = false;
-      nextLink.href = `/aetherica/image?id=${data.next_id}`;
+      nextLink.href = buildDetailHref(data.next_id);
     } else {
       nextLink.hidden = true;
     }
 
-    // Stash for keyboard nav
     detail.dataset.prevId = data.prev_id || '';
     detail.dataset.nextId = data.next_id || '';
 
@@ -160,7 +200,6 @@ likeBtn.addEventListener('click', async () => {
       }
       likeBtn.classList.add('aeth-like-btn--liked');
       markLikedLocally(id);
-      // Stays disabled — successful or already-liked, no reason to re-enable.
     } else {
       console.error('[aetherica] like failed', res.status, data);
       likeBtn.disabled = false;
@@ -171,16 +210,27 @@ likeBtn.addEventListener('click', async () => {
   }
 });
 
-// Keyboard navigation: ← prev, → next, Esc back to gallery.
+// NSFW toggle: flip state and reload so prev/next is recomputed under the new filter.
+if (toggleBtn) {
+  toggleBtn.addEventListener('click', () => {
+    try {
+      localStorage.setItem(NSFW_KEY, nsfwOn() ? 'off' : 'on');
+    } catch { /* ignore */ }
+    window.location.reload();
+  });
+}
+
+// Keyboard navigation: ← prev, → next, Esc back to gallery (respecting filter).
 document.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
   if (e.key === 'ArrowLeft'  && detail.dataset.prevId) {
-    window.location.href = `/aetherica/image?id=${detail.dataset.prevId}`;
+    window.location.href = buildDetailHref(detail.dataset.prevId);
   } else if (e.key === 'ArrowRight' && detail.dataset.nextId) {
-    window.location.href = `/aetherica/image?id=${detail.dataset.nextId}`;
+    window.location.href = buildDetailHref(detail.dataset.nextId);
   } else if (e.key === 'Escape') {
-    window.location.href = '/aetherica/';
+    window.location.href = buildGalleryHref();
   }
 });
 
+renderToggle();
 load();

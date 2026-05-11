@@ -1,10 +1,20 @@
 // Aetherica gallery — fetches recent images and renders a 3-column masonry.
-// Layout via CSS columns; intrinsic aspect ratio reserved by <img width height>.
+// Respects two filters:
+//   - NSFW visibility from localStorage (default "on")
+//   - Tag filter from ?tag= URL param
 
 const R2_PUBLIC_URL = 'https://pub-db6629ddb8a843f48242c0317002614e.r2.dev';
 const PAGE_SIZE = 50;
+const NSFW_KEY = 'aeth_show_nsfw';
 
-const grid = document.getElementById('aeth-grid');
+const grid       = document.getElementById('aeth-grid');
+const toggleBtn  = document.getElementById('aeth-nsfw-toggle');
+const filterBox  = document.getElementById('aeth-filter');
+const filterName = document.getElementById('aeth-filter-name');
+
+function nsfwOn() {
+  return (localStorage.getItem(NSFW_KEY) || 'on') === 'on';
+}
 
 function setState(state) {
   grid.dataset.state = state;
@@ -14,10 +24,41 @@ function thumbUrl(prefix) {
   return `${R2_PUBLIC_URL}/${prefix}/thumb.webp`;
 }
 
+function getActiveTag() {
+  return new URLSearchParams(window.location.search).get('tag') || null;
+}
+
+function renderToggle() {
+  if (!toggleBtn) return;
+  const on = nsfwOn();
+  toggleBtn.dataset.state = on ? 'on' : 'off';
+  toggleBtn.textContent = on ? 'NSFW' : 'SFW';
+  toggleBtn.title = on ? 'Showing NSFW images — click to hide' : 'NSFW hidden — click to show';
+}
+
+function renderFilterBanner() {
+  const tag = getActiveTag();
+  if (!tag) {
+    filterBox.hidden = true;
+    return;
+  }
+  filterBox.hidden = false;
+  filterName.textContent = tag;
+}
+
+function buildDetailHref(id) {
+  // Carry the current tag filter into the detail page so prev/next stays in-filter.
+  const tag = getActiveTag();
+  const params = new URLSearchParams();
+  params.set('id', String(id));
+  if (tag) params.set('tag', tag);
+  return `/aetherica/image?${params.toString()}`;
+}
+
 function renderCard(img) {
   const a = document.createElement('a');
   a.className = 'aeth-card';
-  a.href = `/aetherica/image?id=${img.id}`;
+  a.href = buildDetailHref(img.id);
   a.setAttribute('data-id', img.id);
   if (img.featured) a.classList.add('aeth-card--featured');
 
@@ -27,8 +68,6 @@ function renderCard(img) {
   thumb.alt = img.title || '';
   thumb.loading = 'lazy';
   thumb.draggable = false;
-  // Setting width/height on <img> lets the browser reserve the right amount
-  // of vertical space before the bytes arrive — no layout shift mid-load.
   if (img.width && img.height) {
     thumb.width  = img.width;
     thumb.height = img.height;
@@ -55,7 +94,14 @@ function renderCard(img) {
 async function load() {
   setState('loading');
   try {
-    const res = await fetch(`/api/aetherica/images?limit=${PAGE_SIZE}&offset=0`, {
+    const params = new URLSearchParams();
+    params.set('limit',  String(PAGE_SIZE));
+    params.set('offset', '0');
+    if (!nsfwOn()) params.set('nsfw', 'off');
+    const tag = getActiveTag();
+    if (tag) params.set('tag', tag);
+
+    const res = await fetch(`/api/aetherica/images?${params.toString()}`, {
       headers: { 'Accept': 'application/json' },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -79,4 +125,16 @@ async function load() {
   }
 }
 
+// NSFW toggle: flip state and reload so the API call picks up the new filter.
+if (toggleBtn) {
+  toggleBtn.addEventListener('click', () => {
+    try {
+      localStorage.setItem(NSFW_KEY, nsfwOn() ? 'off' : 'on');
+    } catch { /* ignore */ }
+    window.location.reload();
+  });
+}
+
+renderToggle();
+renderFilterBanner();
 load();

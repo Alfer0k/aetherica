@@ -21,6 +21,7 @@
       <span>Pleasure Manor</span>
     </a>
     <span class="aeth-topbar__brand">Aetherica</span>
+    <button type="button" class="aeth-topbar__nsfw" id="aeth-nsfw-toggle" aria-label="Toggle NSFW visibility">NSFW</button>
   </header>
 
   <main class="aeth-page">
@@ -30,6 +31,10 @@
     </section>
 
     <section class="aeth-grid-wrap">
+      <div class="aeth-filter" id="aeth-filter" hidden>
+        <span class="aeth-filter__label">Filtering by <strong id="aeth-filter-name"></strong></span>
+        <a href="/aetherica/" class="aeth-filter__clear">Clear</a>
+      </div>
       <div id="aeth-grid" class="aeth-grid" data-state="loading">
         <div class="aeth-grid__state aeth-grid__state--loading">Loading…</div>
         <div class="aeth-grid__state aeth-grid__state--empty">Nothing here yet.</div>
