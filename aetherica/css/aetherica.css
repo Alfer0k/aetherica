@@ -20,6 +20,7 @@
   height: var(--nav-height);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 var(--space-lg);
   border-bottom: 1px solid var(--color-border);
 }
@@ -38,49 +39,151 @@
   color: var(--color-text-primary);
 }
 
-/* ---- Landing ---- */
-
-.aeth-landing {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-2xl) var(--space-lg);
+.aeth-topbar__brand {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
 }
 
-.aeth-landing__inner {
-  max-width: 640px;
+/* ---- Page wrapper ---- */
+
+.aeth-page {
+  flex: 1;
+  max-width: var(--content-max-width);
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--space-lg) var(--space-3xl);
+}
+
+/* ---- Hero ---- */
+
+.aeth-hero {
+  padding: var(--space-3xl) 0 var(--space-2xl);
   text-align: center;
 }
 
-.aeth-landing__brand {
+.aeth-hero__title {
   font-family: var(--font-display);
   font-weight: var(--weight-bold);
-  font-size: clamp(3rem, 9vw, 5.5rem);
+  font-size: clamp(2.5rem, 6vw, 4rem);
   line-height: var(--leading-tight);
   letter-spacing: 0.02em;
-  margin: 0 0 var(--space-md);
+  margin: 0 0 var(--space-sm);
   background: linear-gradient(180deg, var(--color-text-primary) 0%, var(--color-accent-light) 120%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.aeth-landing__tagline {
-  font-size: var(--text-lg);
+.aeth-hero__tagline {
+  font-size: var(--text-base);
   color: var(--color-text-secondary);
-  margin: 0 0 var(--space-2xl);
   font-style: italic;
+  margin: 0;
 }
 
-.aeth-landing__status {
-  display: inline-block;
-  font-size: var(--text-xs);
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
+/* ---- Grid ---- */
+
+.aeth-grid-wrap {
+  margin-top: var(--space-xl);
+}
+
+.aeth-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-md);
+  min-height: 200px;
+}
+
+/* State containers — only one visible at a time, controlled by [data-state] */
+.aeth-grid__state {
+  display: none;
+  grid-column: 1 / -1;
+  padding: var(--space-3xl) var(--space-lg);
+  text-align: center;
   color: var(--color-text-muted);
-  padding: var(--space-sm) var(--space-lg);
-  border: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  letter-spacing: 0.05em;
+}
+
+.aeth-grid[data-state="loading"] .aeth-grid__state--loading { display: block; }
+.aeth-grid[data-state="empty"]   .aeth-grid__state--empty   { display: block; }
+.aeth-grid[data-state="error"]   .aeth-grid__state--error   { display: block; color: var(--color-error); }
+
+/* ---- Card ---- */
+
+.aeth-card {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  text-decoration: none;
+  transition: transform var(--duration-normal) var(--ease-out),
+              box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.aeth-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.aeth-card__thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--duration-slow) var(--ease-out),
+              filter var(--duration-normal) var(--ease-out);
+}
+
+.aeth-card:hover .aeth-card__thumb {
+  transform: scale(1.04);
+  filter: brightness(1.05);
+}
+
+/* Title appears on hover */
+.aeth-card__title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: var(--space-lg) var(--space-md) var(--space-md);
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.75) 100%);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity var(--duration-normal) var(--ease-out),
+              transform var(--duration-normal) var(--ease-out);
+  pointer-events: none;
+}
+
+.aeth-card:hover .aeth-card__title {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Likes badge — top right */
+.aeth-card__likes {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  padding: 2px var(--space-sm);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
   border-radius: var(--radius-full);
-  margin: 0;
+  pointer-events: none;
+}
+
+/* Featured: gold accent ring */
+.aeth-card--featured {
+  outline: 2px solid var(--color-level-badge);
+  outline-offset: -2px;
 }
