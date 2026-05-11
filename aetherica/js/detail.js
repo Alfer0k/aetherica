@@ -100,13 +100,13 @@ async function load() {
     metaEl.textContent = metaParts.join(' · ');
 
     // Likes UI — count from server, "liked" state hint from localStorage.
+    // If localStorage says we already liked this, disable the button so we
+    // don't fire useless POSTs that the server will just 409.
     likeCount.textContent = img.likes_count ?? 0;
     likeBtn.dataset.id = img.id;
-    if (getLikedIds().has(img.id)) {
-      likeBtn.classList.add('aeth-like-btn--liked');
-    } else {
-      likeBtn.classList.remove('aeth-like-btn--liked');
-    }
+    const alreadyLiked = getLikedIds().has(img.id);
+    likeBtn.classList.toggle('aeth-like-btn--liked', alreadyLiked);
+    likeBtn.disabled = alreadyLiked;
 
     renderTags(img.tags);
 
@@ -160,6 +160,7 @@ likeBtn.addEventListener('click', async () => {
       }
       likeBtn.classList.add('aeth-like-btn--liked');
       markLikedLocally(id);
+      // Stays disabled — successful or already-liked, no reason to re-enable.
     } else {
       console.error('[aetherica] like failed', res.status, data);
       likeBtn.disabled = false;
