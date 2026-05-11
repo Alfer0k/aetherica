@@ -1,4 +1,5 @@
-// Aetherica gallery — fetches recent images and renders a uniform grid.
+// Aetherica gallery — fetches recent images and renders a 3-column masonry.
+// Layout via CSS columns; intrinsic aspect ratio reserved by <img width height>.
 
 const R2_PUBLIC_URL = 'https://pub-db6629ddb8a843f48242c0317002614e.r2.dev';
 const PAGE_SIZE = 50;
@@ -13,16 +14,10 @@ function thumbUrl(prefix) {
   return `${R2_PUBLIC_URL}/${prefix}/thumb.webp`;
 }
 
-function fullUrl(prefix) {
-  return `${R2_PUBLIC_URL}/${prefix}/full.webp`;
-}
-
 function renderCard(img) {
   const a = document.createElement('a');
   a.className = 'aeth-card';
-  a.href = fullUrl(img.r2_prefix);
-  a.target = '_blank';
-  a.rel = 'noopener';
+  a.href = `/aetherica/image?id=${img.id}`;
   a.setAttribute('data-id', img.id);
   if (img.featured) a.classList.add('aeth-card--featured');
 
@@ -32,6 +27,12 @@ function renderCard(img) {
   thumb.alt = img.title || '';
   thumb.loading = 'lazy';
   thumb.draggable = false;
+  // Setting width/height on <img> lets the browser reserve the right amount
+  // of vertical space before the bytes arrive — no layout shift mid-load.
+  if (img.width && img.height) {
+    thumb.width  = img.width;
+    thumb.height = img.height;
+  }
   a.appendChild(thumb);
 
   if (img.likes_count > 0) {
@@ -61,7 +62,6 @@ async function load() {
     const data = await res.json();
     const images = data.images || [];
 
-    // Clear previous cards but keep the state divs.
     grid.querySelectorAll('.aeth-card').forEach(el => el.remove());
 
     if (images.length === 0) {

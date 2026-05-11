@@ -7,7 +7,7 @@ export const onRequestGet = async ({ request, env }) => {
   const offset = Math.max(parseInt(url.searchParams.get('offset') || '0',  10), 0);
 
   const { results } = await env.DB.prepare(
-    `SELECT id, r2_prefix, title, source_url, nsfw, featured, likes_count, created_at
+    `SELECT id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, created_at
        FROM images
    ORDER BY created_at DESC
       LIMIT ? OFFSET ?`
