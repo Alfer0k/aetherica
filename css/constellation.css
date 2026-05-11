@@ -1,0 +1,212 @@
+/* ============================================
+   Pleasure Manor — Constellation Homepage
+   ============================================ */
+
+/* --- Container --- */
+.constellation {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - var(--nav-height));
+  margin-top: var(--nav-height);
+  overflow: hidden;
+  cursor: default;
+  user-select: none;
+}
+
+/* --- Canvas (connection lines) --- */
+.constellation__canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* --- Node --- */
+.constellation__node {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  cursor: pointer;
+  will-change: transform;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.constellation__node-glow {
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 26, 43, 0.25) 0%, transparent 70%);
+  opacity: 0.5;
+  pointer-events: none;
+  animation: nodeGlowPulse 4s ease-in-out infinite alternate;
+  animation-delay: var(--glow-delay, 0s);
+}
+
+@keyframes nodeGlowPulse {
+  0%   { opacity: 0.35; transform: scale(0.92); }
+  100% { opacity: 0.7;  transform: scale(1.1); }
+}
+
+.constellation__node-circle {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 40% 35%,
+    rgba(139, 26, 43, 0.3) 0%,
+    rgba(30, 30, 30, 0.95) 70%
+  );
+  border: 1px solid rgba(139, 26, 43, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  overflow: hidden;
+  transition: transform var(--duration-normal) var(--ease-out),
+              border-color var(--duration-normal) var(--ease-out),
+              box-shadow var(--duration-slow) var(--ease-out);
+}
+
+/* --- Preview images (two for crossfade) --- */
+.constellation__node-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.constellation__node-preview--active {
+  opacity: 1;
+}
+
+/* --- Progress ring --- */
+.constellation__node-progress {
+  position: absolute;
+  inset: -3px;
+  width: calc(100% + 6px);
+  height: calc(100% + 6px);
+  z-index: 3;
+  pointer-events: none;
+  transform: rotate(-90deg);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.constellation__node--hovered .constellation__node-progress {
+  opacity: 1;
+}
+
+.constellation__node-progress circle {
+  fill: none;
+  stroke: rgba(139, 26, 43, 0.7);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 289;
+  stroke-dashoffset: 289;
+}
+
+.constellation__node--hovered .constellation__node-progress circle {
+  animation: progressFill 2s linear infinite;
+}
+
+@keyframes progressFill {
+  from { stroke-dashoffset: 289; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* --- Info overlay (name + count on top of preview) --- */
+.constellation__node-info {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+}
+
+.constellation__node-name {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+  text-align: center;
+  line-height: 1.2;
+  padding: 0 10px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+
+.constellation__node-count {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+
+/* --- Node: hovered --- */
+.constellation__node--hovered {
+  z-index: 10;
+}
+
+.constellation__node--hovered .constellation__node-circle {
+  transform: scale(var(--hover-scale, 1.5));
+  border-color: rgba(139, 26, 43, 0.6);
+  box-shadow:
+    0 0 30px rgba(139, 26, 43, 0.4),
+    0 0 60px rgba(139, 26, 43, 0.15);
+}
+
+.constellation__node--hovered .constellation__node-glow {
+  opacity: 1;
+  animation-play-state: paused;
+}
+
+.constellation__node--hovered .constellation__node-info {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+/* --- Node: dimmed (another node is hovered) --- */
+.constellation__node--dimmed {
+  opacity: 0.25;
+  pointer-events: none;
+  transition: opacity var(--duration-slow) var(--ease-out);
+}
+
+.constellation__node--dimmed .constellation__node-glow {
+  opacity: 0.1;
+}
+
+/* --- Mobile --- */
+@media (max-width: 767px) {
+  .constellation__canvas {
+    display: none;
+  }
+
+  .constellation__node-name {
+    font-size: 10px;
+  }
+
+  .constellation__node-count {
+    display: none;
+  }
+}
