@@ -257,11 +257,17 @@
   background: var(--color-bg-card-hover);
 }
 
-/* Hidden attribute needs to win against display: flex above. */
-.aeth-detail__nav[hidden] { display: none; }
+/* Keep the slot reserved when at an edge, so the image stays centered.
+   The [hidden] attribute's default display:none would collapse the column. */
+.aeth-detail__nav[hidden] {
+  display: flex;
+  opacity: 0;
+  pointer-events: none;
+}
 
 @media (max-width: 720px) {
-  .aeth-detail__nav { display: none; }
+  .aeth-detail__nav,
+  .aeth-detail__nav[hidden] { display: none; }
 }
 
 .aeth-detail__figure {
