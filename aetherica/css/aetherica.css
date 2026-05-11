@@ -257,11 +257,17 @@
   background: var(--color-bg-card-hover);
 }
 
-/* Hidden attribute needs to win against display: flex above. */
-.aeth-detail__nav[hidden] { display: none; }
+/* Keep the slot reserved when at an edge, so the image stays centered.
+   The [hidden] attribute's default display:none would collapse the column. */
+.aeth-detail__nav[hidden] {
+  display: flex;
+  opacity: 0;
+  pointer-events: none;
+}
 
 @media (max-width: 720px) {
-  .aeth-detail__nav { display: none; }
+  .aeth-detail__nav,
+  .aeth-detail__nav[hidden] { display: none; }
 }
 
 .aeth-detail__figure {
@@ -343,3 +349,63 @@
   text-decoration: none;
 }
 .aeth-detail__source a:hover { text-decoration: underline; }
+
+/* Like button */
+
+.aeth-detail__like-row {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-sm);
+}
+
+.aeth-like-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-spring);
+}
+
+.aeth-like-btn:hover:not(:disabled):not(.aeth-like-btn--liked) {
+  color: var(--color-accent-light);
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.aeth-like-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.aeth-like-btn svg {
+  display: block;
+  transition: fill var(--duration-fast) var(--ease-out);
+}
+
+.aeth-like-btn__count {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-medium);
+}
+
+.aeth-like-btn--liked {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.aeth-like-btn--liked svg path {
+  fill: currentColor;
+}
+
+.aeth-like-btn:disabled {
+  cursor: default;
+}

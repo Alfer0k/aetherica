@@ -14,6 +14,22 @@ const sourceWrap    = document.getElementById('aeth-source');
 const sourceLink    = document.getElementById('aeth-source-link');
 const prevLink      = document.getElementById('aeth-prev');
 const nextLink      = document.getElementById('aeth-next');
+const likeBtn       = document.getElementById('aeth-like-btn');
+const likeCount     = document.getElementById('aeth-like-count');
+
+const LIKED_KEY = 'aeth_liked_ids';
+
+function getLikedIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(LIKED_KEY) || '[]'));
+  } catch { return new Set(); }
+}
+
+function markLikedLocally(id) {
+  const set = getLikedIds();
+  set.add(id);
+  try { localStorage.setItem(LIKED_KEY, JSON.stringify([...set])); } catch {}
+}
 
 function setState(state) {
   detail.dataset.state = state;
@@ -80,11 +96,17 @@ async function load() {
     titleEl.hidden = !img.title;
 
     const metaParts = [`#${img.id}`, formatDate(img.created_at)];
-    if (img.likes_count > 0) {
-      metaParts.push(`${img.likes_count} like${img.likes_count === 1 ? '' : 's'}`);
-    }
     if (img.featured) metaParts.push('★ Featured');
     metaEl.textContent = metaParts.join(' · ');
+
+    // Likes UI — count from server, "liked" state hint from localStorage.
+    // If localStorage says we already liked this, disable the button so we
+    // don't fire useless POSTs that the server will just 409.
+    likeCount.textContent = img.likes_count ?? 0;
+    likeBtn.dataset.id = img.id;
+    const alreadyLiked = getLikedIds().has(img.id);
+    likeBtn.classList.toggle('aeth-like-btn--liked', alreadyLiked);
+    likeBtn.disabled = alreadyLiked;
 
     renderTags(img.tags);
 
@@ -120,6 +142,34 @@ async function load() {
     setState('error');
   }
 }
+
+// Like button — POST to server, optimistic UI; 409 means "this IP already liked"
+// so we sync the UI to the server's count regardless.
+likeBtn.addEventListener('click', async () => {
+  const id = parseInt(likeBtn.dataset.id, 10);
+  if (!id || likeBtn.disabled) return;
+
+  likeBtn.disabled = true;
+  try {
+    const res = await fetch(`/api/aetherica/images/${id}/like`, { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok || res.status === 409) {
+      if (typeof data.likes_count === 'number') {
+        likeCount.textContent = data.likes_count;
+      }
+      likeBtn.classList.add('aeth-like-btn--liked');
+      markLikedLocally(id);
+      // Stays disabled — successful or already-liked, no reason to re-enable.
+    } else {
+      console.error('[aetherica] like failed', res.status, data);
+      likeBtn.disabled = false;
+    }
+  } catch (err) {
+    console.error('[aetherica] like network error', err);
+    likeBtn.disabled = false;
+  }
+});
 
 // Keyboard navigation: ← prev, → next, Esc back to gallery.
 document.addEventListener('keydown', (e) => {
