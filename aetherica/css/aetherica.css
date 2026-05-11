@@ -257,6 +257,9 @@
   background: var(--color-bg-card-hover);
 }
 
+/* Hidden attribute needs to win against display: flex above. */
+.aeth-detail__nav[hidden] { display: none; }
+
 @media (max-width: 720px) {
   .aeth-detail__nav { display: none; }
 }
