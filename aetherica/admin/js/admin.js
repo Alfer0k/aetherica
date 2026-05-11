@@ -308,6 +308,8 @@
       form.append('tags',       tagsInput.value);
       form.append('nsfw',       nsfwInput.checked     ? '1' : '0');
       form.append('featured',   featuredInput.checked ? '1' : '0');
+      form.append('width',      String(loadedImage.naturalWidth));
+      form.append('height',     String(loadedImage.naturalHeight));
 
       const res = await fetch('/api/aetherica/admin/upload', {
         method: 'POST',

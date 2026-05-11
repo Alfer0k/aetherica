@@ -37,6 +37,8 @@ export const onRequestPost = async ({ request, env }) => {
   const featured   = form.get('featured') === '1' ? 1 : 0;
   const tagsRaw    = (form.get('tags')       || '').toString();
   const tagList    = parseTags(tagsRaw);
+  const width      = parseInt(form.get('width')  || '0', 10) || null;
+  const height     = parseInt(form.get('height') || '0', 10) || null;
 
   const prefix = randomPrefix();
   const now    = Math.floor(Date.now() / 1000);
@@ -52,9 +54,9 @@ export const onRequestPost = async ({ request, env }) => {
   let imageId;
   try {
     const res = await env.DB.prepare(
-      `INSERT INTO images (r2_prefix, title, source_url, nsfw, featured, likes_count, created_at)
-       VALUES (?, ?, ?, ?, ?, 0, ?)`
-    ).bind(prefix, title, sourceUrl, nsfw, featured, now).run();
+      `INSERT INTO images (r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, created_at)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`
+    ).bind(prefix, title, sourceUrl, nsfw, featured, width, height, now).run();
     imageId = res.meta.last_row_id;
   } catch (err) {
     // Try to clean up R2 objects we just wrote so we don't leave orphans.

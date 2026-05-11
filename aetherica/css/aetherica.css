@@ -83,23 +83,28 @@
   margin: 0;
 }
 
-/* ---- Grid ---- */
+/* ---- Masonry grid (CSS columns) ---- */
 
 .aeth-grid-wrap {
   margin-top: var(--space-xl);
 }
 
 .aeth-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: var(--space-md);
+  column-count: 3;
+  column-gap: var(--space-md);
   min-height: 200px;
+}
+
+@media (max-width: 900px) {
+  .aeth-grid { column-count: 2; }
+}
+@media (max-width: 540px) {
+  .aeth-grid { column-count: 1; }
 }
 
 /* State containers — only one visible at a time, controlled by [data-state] */
 .aeth-grid__state {
   display: none;
-  grid-column: 1 / -1;
   padding: var(--space-3xl) var(--space-lg);
   text-align: center;
   color: var(--color-text-muted);
@@ -111,12 +116,17 @@
 .aeth-grid[data-state="empty"]   .aeth-grid__state--empty   { display: block; }
 .aeth-grid[data-state="error"]   .aeth-grid__state--error   { display: block; color: var(--color-error); }
 
-/* ---- Card ---- */
+/* ---- Card (masonry cell) ---- */
 
 .aeth-card {
   position: relative;
   display: block;
-  aspect-ratio: 1 / 1;
+  width: 100%;
+  margin-bottom: var(--space-md);
+  /* Prevents a card from being split across two columns. */
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
   background: var(--color-bg-secondary);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -132,15 +142,12 @@
 
 .aeth-card__thumb {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
   display: block;
-  transition: transform var(--duration-slow) var(--ease-out),
-              filter var(--duration-normal) var(--ease-out);
+  transition: filter var(--duration-normal) var(--ease-out);
 }
 
 .aeth-card:hover .aeth-card__thumb {
-  transform: scale(1.04);
   filter: brightness(1.05);
 }
 
@@ -187,3 +194,149 @@
   outline: 2px solid var(--color-level-badge);
   outline-offset: -2px;
 }
+
+/* ============================================
+   Image detail page
+   ============================================ */
+
+.aeth-detail {
+  flex: 1;
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg) var(--space-3xl);
+  position: relative;
+}
+
+.aeth-detail__state {
+  display: none;
+  padding: var(--space-3xl) var(--space-lg);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.aeth-detail__state a { color: var(--color-accent-light); }
+
+.aeth-detail[data-state="loading"]  .aeth-detail__state--loading  { display: block; }
+.aeth-detail[data-state="error"]    .aeth-detail__state--error    { display: block; color: var(--color-error); }
+.aeth-detail[data-state="notfound"] .aeth-detail__state--notfound { display: block; }
+
+.aeth-detail__content {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+@media (max-width: 720px) {
+  .aeth-detail__content {
+    grid-template-columns: 1fr;
+  }
+}
+
+.aeth-detail__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out);
+}
+
+.aeth-detail__nav:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-accent);
+  background: var(--color-bg-card-hover);
+}
+
+@media (max-width: 720px) {
+  .aeth-detail__nav { display: none; }
+}
+
+.aeth-detail__figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+.aeth-detail__image-link {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+}
+
+.aeth-detail__image-link img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  max-height: calc(100vh - 220px);
+  object-fit: contain;
+}
+
+.aeth-detail__caption {
+  max-width: 720px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  text-align: center;
+}
+
+.aeth-detail__title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.aeth-detail__title[hidden] { display: none; }
+
+.aeth-detail__meta {
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.aeth-detail__tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: var(--space-xs);
+}
+
+.aeth-detail__tag {
+  display: inline-block;
+  font-size: var(--text-xs);
+  padding: 4px var(--space-sm);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.aeth-detail__tag--ns-medium  { color: #b794f4; border-color: rgba(183, 148, 244, 0.3); }
+.aeth-detail__tag--ns-subject { color: #76d1c0; border-color: rgba(118, 209, 192, 0.3); }
+.aeth-detail__tag--ns-mood    { color: #f5a623; border-color: rgba(245, 166, 35, 0.3); }
+.aeth-detail__tag--ns-style   { color: #6cb4ff; border-color: rgba(108, 180, 255, 0.3); }
+
+.aeth-detail__source a {
+  color: var(--color-accent-light);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+.aeth-detail__source a:hover { text-decoration: underline; }
