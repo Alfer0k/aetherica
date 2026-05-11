@@ -69,7 +69,7 @@
       try {
         await fetch('/api/aetherica/admin/logout', { method: 'POST' });
       } catch { /* ignore — we redirect either way */ }
-      window.location.href = '/aetherica/admin/login.html';
+      window.location.href = '/aetherica/admin/login';
     });
   }
 
