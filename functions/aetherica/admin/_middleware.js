@@ -5,16 +5,28 @@
 
 import { verifySession } from '../../_lib/session.js';
 
-const LOGIN_PATHS = new Set([
+const PUBLIC_PATHS = new Set([
   '/aetherica/admin/login',
   '/aetherica/admin/login.html',
 ]);
+// Static assets under the admin folder must be reachable without a session,
+// otherwise the login page itself can't load its own CSS/JS.
+const PUBLIC_PREFIXES = [
+  '/aetherica/admin/css/',
+  '/aetherica/admin/js/',
+];
 const LOGIN_REDIRECT = '/aetherica/admin/login';
+
+function isPublic(pathname) {
+  if (PUBLIC_PATHS.has(pathname)) return true;
+  for (const p of PUBLIC_PREFIXES) if (pathname.startsWith(p)) return true;
+  return false;
+}
 
 export const onRequest = async ({ request, env, next }) => {
   const url = new URL(request.url);
 
-  if (LOGIN_PATHS.has(url.pathname)) {
+  if (isPublic(url.pathname)) {
     return next();
   }
 
