@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aetherica admin — sign in</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/base.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="adm-body adm-body--login">
+
+  <main class="adm-login">
+    <form class="adm-login__card" id="adm-login-form">
+      <h1 class="adm-login__title">Aetherica</h1>
+      <p class="adm-login__sub">Curator sign in</p>
+
+      <label class="adm-login__field">
+        <span class="adm-login__label">Password</span>
+        <input
+          type="password"
+          name="password"
+          id="adm-login-password"
+          class="adm-login__input"
+          autocomplete="current-password"
+          autofocus
+          required>
+      </label>
+
+      <div class="adm-login__error" id="adm-login-error" hidden></div>
+
+      <button type="submit" class="adm-login__submit" id="adm-login-submit">
+        Sign in
+      </button>
+    </form>
+  </main>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>
