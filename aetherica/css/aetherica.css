@@ -46,6 +46,72 @@
   color: var(--color-text-secondary);
 }
 
+.aeth-topbar__nsfw {
+  margin-left: auto;
+  font-family: inherit;
+  font-size: var(--text-xs);
+  letter-spacing: 0.15em;
+  font-weight: var(--weight-semibold);
+  padding: 4px var(--space-md);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out);
+}
+
+.aeth-topbar__nsfw:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-border-hover);
+}
+
+.aeth-topbar__nsfw[data-state="on"] {
+  color: var(--color-accent-light);
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+/* ---- Filter banner ---- */
+
+.aeth-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-lg);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.aeth-filter[hidden] { display: none; }
+
+.aeth-filter__label strong {
+  color: var(--color-accent-light);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+}
+
+.aeth-filter__clear {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--color-border-hover);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.aeth-filter__clear:hover {
+  color: var(--color-text-primary);
+}
+
 /* ---- Page wrapper ---- */
 
 .aeth-page {
@@ -336,6 +402,15 @@
   background: var(--color-bg-tertiary);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+.aeth-detail__tag:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-border-hover);
 }
 
 .aeth-detail__tag--ns-medium  { color: #b794f4; border-color: rgba(183, 148, 244, 0.3); }
