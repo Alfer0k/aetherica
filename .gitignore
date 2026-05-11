@@ -1,0 +1,41 @@
+# OS junk
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Local env / secrets
+.env
+.env.*
+*.env.local
+secrets.json
+
+# Dependencies
+node_modules/
+
+# Working notes & local Claude config
+.claude/
+
+# Binary blobs — never commit
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# IDE
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+
+# Wrangler local state
+.wrangler/
+.dev.vars
+
+# Build output (if ever added)
+dist/
+build/
+.cache/
+
+# Logs
+*.log
+npm-debug.log*
