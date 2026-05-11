@@ -2,36 +2,7 @@
 // Multipart form: thumb, med, full (all image/webp blobs) + metadata.
 // Writes 3 R2 objects under {prefix}/{size}.webp, inserts image row, processes tags.
 
-const RESERVED_NAMESPACES = new Set(['medium', 'subject', 'mood', 'style']);
-
-function parseTags(raw) {
-  if (!raw) return [];
-  const seen = new Set();
-  const out = [];
-  for (const piece of raw.split(',')) {
-    const trimmed = piece.trim().toLowerCase();
-    if (!trimmed) continue;
-
-    let namespace = '';
-    let name = trimmed;
-    const colon = trimmed.indexOf(':');
-    if (colon !== -1) {
-      const ns = trimmed.slice(0, colon).trim();
-      const n  = trimmed.slice(colon + 1).trim();
-      if (RESERVED_NAMESPACES.has(ns) && n) {
-        namespace = ns;
-        name = n;
-      }
-      // unknown namespace → fall through, treat whole string as a general tag name
-    }
-
-    const key = `${namespace}:${name}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push({ namespace, name });
-  }
-  return out;
-}
+import { parseTags } from '../../../_lib/tags.js';
 
 function randomPrefix() {
   // 16 hex chars from random bytes → 64 bits of entropy; plenty for collision-free R2 keys.

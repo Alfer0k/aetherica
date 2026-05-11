@@ -1,7 +1,9 @@
-// Admin login + logout + upload glue. Both pages load this file;
+// Admin login + logout + upload + edit glue. All pages load this file;
 // each branch runs only if the matching DOM is present.
 
 (function () {
+
+  const R2_PUBLIC_URL = 'https://pub-db6629ddb8a843f48242c0317002614e.r2.dev';
 
   // ============================================================
   // Login page
@@ -81,7 +83,7 @@
   }
 
   // ============================================================
-  // Upload page
+  // Upload / edit page (same form, mode driven by ?edit=ID)
   // ============================================================
 
   const uploadForm = document.getElementById('adm-upload-form');
@@ -101,6 +103,8 @@
   const featuredInput = document.getElementById('adm-featured');
   const statusBox     = document.getElementById('adm-upload-status');
   const submitBtn     = document.getElementById('adm-upload-submit');
+  const pageTitle     = document.getElementById('adm-page-title');
+  const cancelLink    = document.getElementById('adm-edit-cancel');
 
   const MAX_INPUT_BYTES = 30 * 1024 * 1024;
   const THUMB_DIM = 400;
@@ -110,6 +114,14 @@
   let selectedFile = null;
   let loadedImage = null;
   let previewUrl = null;
+
+  // Edit mode state — set by initEditMode() if ?edit=ID present.
+  const editId = (() => {
+    const id = new URLSearchParams(window.location.search).get('edit');
+    const n = id ? parseInt(id, 10) : NaN;
+    return Number.isFinite(n) && n > 0 ? n : null;
+  })();
+  const isEditMode = editId !== null;
 
   function setStatus(msg, kind) {
     statusBox.hidden = false;
@@ -123,7 +135,12 @@
   }
 
   function setSubmitEnabled() {
-    submitBtn.disabled = !selectedFile;
+    if (isEditMode) {
+      // In edit mode the image is fixed; submit just needs at least one field present.
+      submitBtn.disabled = false;
+    } else {
+      submitBtn.disabled = !selectedFile;
+    }
   }
 
   function resetSelection() {
@@ -147,6 +164,10 @@
     return `${(n / 1024 / 1024).toFixed(1)} MB`;
   }
 
+  function formatTagsForInput(tags) {
+    return (tags || []).map(t => t.namespace ? `${t.namespace}:${t.name}` : t.name).join(', ');
+  }
+
   function loadImage(file) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -161,6 +182,7 @@
   }
 
   async function selectFile(file) {
+    if (isEditMode) return; // image is locked in edit mode
     clearStatus();
     if (!file || !file.type.startsWith('image/')) {
       setStatus('That doesn\'t look like an image file.', 'error');
@@ -204,9 +226,10 @@
     });
   }
 
-  // Drag-drop
+  // Drag-drop wiring (no-ops in edit mode)
   ['dragenter', 'dragover'].forEach(evt => {
     drop.addEventListener(evt, (e) => {
+      if (isEditMode) return;
       e.preventDefault();
       drop.classList.add('adm-drop--over');
     });
@@ -218,16 +241,18 @@
     });
   });
   drop.addEventListener('drop', (e) => {
+    if (isEditMode) return;
     const file = e.dataTransfer?.files?.[0];
     if (file) selectFile(file);
   });
 
-  // Click to pick (but not when clicking the X button)
   drop.addEventListener('click', (e) => {
+    if (isEditMode) return;
     if (e.target === clearBtn || clearBtn.contains(e.target)) return;
     if (!selectedFile) fileInput.click();
   });
   drop.addEventListener('keydown', (e) => {
+    if (isEditMode) return;
     if ((e.key === 'Enter' || e.key === ' ') && !selectedFile) {
       e.preventDefault();
       fileInput.click();
@@ -241,13 +266,23 @@
 
   clearBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    if (isEditMode) return; // clear is hidden in edit mode anyway
     resetSelection();
     clearStatus();
   });
 
-  // Submit
+  // ----- Submit -----
+
   uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    if (isEditMode) {
+      return submitEdit();
+    }
+    return submitCreate();
+  });
+
+  async function submitCreate() {
     if (!selectedFile || !loadedImage) return;
 
     submitBtn.disabled = true;
@@ -292,13 +327,11 @@
       const data = await res.json();
       setStatus(`Added image #${data.id}. Tags: ${data.tags}.`, 'success');
 
-      // Reset for next upload, but keep last-used tags for quick repeat.
       resetSelection();
       titleInput.value = '';
       sourceInput.value = '';
       featuredInput.checked = false;
-      // nsfw stays as-is — usually the curator runs in batches of similar NSFW state.
-      // tags stay as-is for same reason.
+      // nsfw + tags stay as-is for fast batch repeats
 
     } catch (err) {
       setStatus(err.message || 'Something went wrong.', 'error');
@@ -306,6 +339,98 @@
       submitBtn.textContent = originalText;
       setSubmitEnabled();
     }
-  });
+  }
+
+  async function submitEdit() {
+    submitBtn.disabled = true;
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Saving…';
+    setStatus('Saving…', 'info');
+
+    try {
+      const body = {
+        title:      titleInput.value.trim(),
+        source_url: sourceInput.value.trim(),
+        tags:       tagsInput.value,
+        nsfw:       nsfwInput.checked,
+        featured:   featuredInput.checked,
+      };
+
+      const res = await fetch(`/api/aetherica/admin/images/${editId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        let msg = `Save failed (${res.status}).`;
+        try {
+          const data = await res.json();
+          if (data && data.error) msg = data.error;
+        } catch {}
+        setStatus(msg, 'error');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        return;
+      }
+
+      setStatus('Saved. Returning to list…', 'success');
+      window.location.href = '/aetherica/admin/manage';
+
+    } catch (err) {
+      setStatus(err.message || 'Something went wrong.', 'error');
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+    }
+  }
+
+  // ----- Edit-mode init -----
+
+  async function initEditMode() {
+    if (!isEditMode) return;
+
+    uploadForm.dataset.mode = 'edit';
+    pageTitle.textContent = `Edit image #${editId}`;
+    submitBtn.textContent = 'Save changes';
+    cancelLink.hidden = false;
+    clearBtn.hidden = true; // can't change the image in edit mode
+
+    setStatus('Loading…', 'info');
+
+    try {
+      const res = await fetch(`/api/aetherica/admin/images/${editId}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          setStatus('Image not found. Returning to list…', 'error');
+          setTimeout(() => { window.location.href = '/aetherica/admin/manage'; }, 1500);
+        } else {
+          setStatus(`Couldn't load image (${res.status}).`, 'error');
+        }
+        return;
+      }
+      const data = await res.json();
+      const img = data.image;
+
+      titleInput.value      = img.title      || '';
+      sourceInput.value     = img.source_url || '';
+      tagsInput.value       = formatTagsForInput(img.tags);
+      nsfwInput.checked     = !!img.nsfw;
+      featuredInput.checked = !!img.featured;
+
+      // Show existing image in the drop zone (med size, no need to load full).
+      previewImg.src = `${R2_PUBLIC_URL}/${img.r2_prefix}/med.webp`;
+      previewMeta.textContent = img.title ? `#${img.id} · ${img.title}` : `#${img.id}`;
+      emptyState.hidden = true;
+      previewBox.hidden = false;
+
+      clearStatus();
+      setSubmitEnabled();
+
+    } catch (err) {
+      setStatus('Network error loading image.', 'error');
+    }
+  }
+
+  initEditMode();
 
 })();
