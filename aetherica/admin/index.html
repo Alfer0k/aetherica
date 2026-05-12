@@ -45,7 +45,7 @@
             <div class="adm-drop__meta" id="adm-drop-meta"></div>
           </div>
         </div>
-      <div>
+      <div style="display: flex; flex-direction: column; gap: 20px;">
         <div class="adm-fields">
 
           <label class="adm-field">
@@ -76,13 +76,15 @@
           </div>
 
         </div>
+
+        <div class="adm-upload__status" id="adm-upload-status" hidden></div>
+
+        <button type="submit" class="adm-upload__submit" id="adm-upload-submit" disabled>
+          Add Image
+        </button>
       </div>
 
-      <div class="adm-upload__status" id="adm-upload-status" hidden></div>
-
-      <button type="submit" class="adm-upload__submit" id="adm-upload-submit" disabled>
-        Add Image
-      </button>
+      
 
     </form>
 

@@ -24,26 +24,53 @@
     <button type="button" class="aeth-topbar__nsfw" id="aeth-nsfw-toggle" aria-label="Toggle NSFW visibility">NSFW</button>
   </header>
 
-  <main class="aeth-page">
-    <!--
-    <section class="aeth-hero">
-      <h1 class="aeth-hero__title">Aetherica</h1>
-      <p class="aeth-hero__tagline">A curated archive of aesthetic imagery.</p>
-    </section>
-    -->
+  <button type="button" class="aeth-filter-btn" id="aeth-filter-btn" aria-label="Open filter">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"/></svg>
+    <span class="aeth-filter-btn__count" id="aeth-filter-btn-count" hidden>0</span>
+  </button>
 
+  <main class="aeth-page">
     <section class="aeth-grid-wrap">
       <div class="aeth-filter" id="aeth-filter" hidden>
-        <span class="aeth-filter__label">Filtering by <strong id="aeth-filter-name"></strong></span>
-        <a href="/aetherica/" class="aeth-filter__clear">Clear</a>
+        <span class="aeth-filter__label">Filtering by</span>
+        <div class="aeth-filter__chips" id="aeth-filter-chips"></div>
+        <button type="button" class="aeth-filter__clear" id="aeth-filter-clear">Clear all</button>
       </div>
       <div id="aeth-grid" class="aeth-grid" data-state="loading">
         <div class="aeth-grid__state aeth-grid__state--loading">Loading…</div>
-        <div class="aeth-grid__state aeth-grid__state--empty">Nothing here yet.</div>
+        <div class="aeth-grid__state aeth-grid__state--empty">Nothing matches.</div>
         <div class="aeth-grid__state aeth-grid__state--error">Couldn't load images. Try refreshing.</div>
       </div>
     </section>
   </main>
+
+  <div class="aeth-filter-backdrop" id="aeth-filter-backdrop" hidden></div>
+
+  <aside class="aeth-filter-panel" id="aeth-filter-panel" aria-hidden="true" hidden>
+    <header class="aeth-filter-panel__header">
+      <span class="aeth-filter-panel__title">Filter</span>
+      <button type="button" class="aeth-filter-panel__close" id="aeth-filter-panel-close" aria-label="Close filter">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+
+    <div class="aeth-filter-panel__search">
+      <input type="text" id="aeth-filter-search" placeholder="Search tags…" autocomplete="off">
+    </div>
+
+    <div class="aeth-filter-panel__hint">
+      Click once to include, twice to exclude, third to clear.
+    </div>
+
+    <div class="aeth-filter-panel__list" id="aeth-filter-panel-list">
+      <div class="aeth-filter-panel__loading">Loading tags…</div>
+    </div>
+
+    <footer class="aeth-filter-panel__footer">
+      <button type="button" class="aeth-filter-panel__clear" id="aeth-filter-panel-clear">Clear all</button>
+      <button type="button" class="aeth-filter-panel__apply" id="aeth-filter-panel-apply">Apply</button>
+    </footer>
+  </aside>
 
   <script src="js/gallery.js"></script>
 </body>

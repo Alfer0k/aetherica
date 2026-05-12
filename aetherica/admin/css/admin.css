@@ -523,13 +523,14 @@
   color: var(--color-text-on-accent);
   border: none;
   border-radius: var(--radius-md);
-  padding: var(--space-sm) var(--space-xl);
+  padding: var(--space-md) var(--space-xl);
   font-family: inherit;
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
   letter-spacing: 0.05em;
   cursor: pointer;
   transition: background var(--duration-fast) var(--ease-out);
+  align-self: stretch;
 }
 
 .adm-upload__submit:hover:not(:disabled) { background: var(--color-accent-hover); }
@@ -594,8 +595,8 @@
    ============================================ */
 
 .adm-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-sm);
   min-height: 200px;
 }
