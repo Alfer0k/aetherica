@@ -5,10 +5,10 @@
 -- ============================================
 
 -- Images: one row per curated image.
--- r2_prefix is the R2 key prefix; the three rendered sizes live at:
---   {r2_prefix}/thumb.webp   (~400px)
---   {r2_prefix}/med.webp     (~1200px)
---   {r2_prefix}/full.webp    (original-resolution WebP)
+-- r2_prefix is the R2 key prefix; rendered sizes live at:
+--   {r2_prefix}/thumb.webp     (~400-800px, always WebP, first-frame for GIFs)
+--   {r2_prefix}/med.webp       (~1200-2000px, WebP — omitted for animated GIFs)
+--   {r2_prefix}/full.{ext}     (full size; ext = full_format: 'webp' or 'gif')
 CREATE TABLE IF NOT EXISTS images (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   r2_prefix    TEXT    NOT NULL UNIQUE,
@@ -17,6 +17,9 @@ CREATE TABLE IF NOT EXISTS images (
   nsfw         INTEGER NOT NULL DEFAULT 0,   -- 0 = SFW, 1 = NSFW
   featured     INTEGER NOT NULL DEFAULT 0,   -- 0 / 1, curator editorial highlight
   likes_count  INTEGER NOT NULL DEFAULT 0,   -- denormalized; updated by like endpoint
+  width        INTEGER,                      -- intrinsic px, captured at upload time
+  height       INTEGER,
+  full_format  TEXT    NOT NULL DEFAULT 'webp', -- 'webp' for stills, 'gif' for animated
   created_at   INTEGER NOT NULL              -- unix epoch seconds
 );
 

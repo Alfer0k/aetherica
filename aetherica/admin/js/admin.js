@@ -107,8 +107,30 @@
   const submitBtn     = document.getElementById('adm-upload-submit');
   const pageTitle     = document.getElementById('adm-page-title');
   const cancelLink    = document.getElementById('adm-edit-cancel');
+  const overlay       = document.getElementById('adm-overlay');
+  const overlayLabel  = document.getElementById('adm-overlay-label');
 
-  const MAX_INPUT_BYTES = 30 * 1024 * 1024;
+  function showOverlay(label) {
+    if (!overlay) return;
+    if (label && overlayLabel) overlayLabel.textContent = label;
+    overlay.hidden = false;
+  }
+  function hideOverlay() {
+    if (!overlay) return;
+    overlay.hidden = true;
+  }
+
+  const MAX_INPUT_BYTES = 10 * 1024 * 1024;
+  const IMAGE_EXT_RE = /\.(jpe?g|jfif|png|webp|gif|bmp|avif)$/i;
+
+  function isImageFile(file) {
+    if (!file) return false;
+    if (file.type && file.type.startsWith('image/')) return true;
+    // Some browsers (esp. Windows + .jfif) report an empty `type`. Fall back
+    // to the filename extension so the curator isn't blocked on plausible
+    // image files just because the OS didn't tag them with a MIME type.
+    return IMAGE_EXT_RE.test(file.name || '');
+  }
   // Thumb: width-based — the gallery is a 3-col masonry where the column
   // width (not the longest side) is what determines display size. 800px wide
   // covers 440px CSS columns at 2x retina with headroom.
@@ -222,12 +244,12 @@
     if (isEditMode) return; // image is locked in edit mode
     if (isUploading) return; // don't allow swapping the staged file mid-upload
     clearStatus();
-    if (!file || !file.type.startsWith('image/')) {
+    if (!isImageFile(file)) {
       setStatus('That doesn\'t look like an image file.', 'error');
       return;
     }
     if (file.size > MAX_INPUT_BYTES) {
-      setStatus(`File is ${formatBytes(file.size)} — max 30 MB.`, 'error');
+      setStatus(`File is ${formatBytes(file.size)} — max 10 MB.`, 'error');
       return;
     }
 
@@ -339,6 +361,7 @@
 
     isUploading = true;
     submitBtn.disabled = true;
+    showOverlay('Preparing…');
     const originalText = submitBtn.textContent;
 
     // Snapshot the staged file refs at submit time so a stray selectFile()
@@ -347,20 +370,42 @@
     const imageForUpload = loadedImage;
 
     try {
-      setStatus('Resizing…', 'info');
-      const [thumb, med, full] = await Promise.all([
-        resizeByWidth (imageForUpload, THUMB_WIDTH, WEBP_QUALITY),
-        resizeByMaxDim(imageForUpload, MED_DIM,     WEBP_QUALITY),
-        resizeByMaxDim(imageForUpload, Infinity,    WEBP_QUALITY),
-      ]);
+      // GIFs keep their original bytes for the `full` size so animation survives.
+      // Static images go through the canvas WebP pipeline for all three sizes.
+      const isGif = (fileForUpload.type === 'image/gif') ||
+                    /\.gif$/i.test(fileForUpload.name || '');
 
-      setStatus(`Uploading… (thumb ${formatBytes(thumb.size)}, med ${formatBytes(med.size)}, full ${formatBytes(full.size)})`, 'info');
+      setStatus('Resizing…', 'info');
+      showOverlay('Resizing…');
+
+      const thumb = await resizeByWidth(imageForUpload, THUMB_WIDTH, WEBP_QUALITY);
+      let med  = null;
+      let full;
+      let fullFormat;
+      if (isGif) {
+        // Skip med entirely — detail page will use full.gif so the animation plays.
+        full = fileForUpload;
+        fullFormat = 'gif';
+      } else {
+        [med, full] = await Promise.all([
+          resizeByMaxDim(imageForUpload, MED_DIM,    WEBP_QUALITY),
+          resizeByMaxDim(imageForUpload, Infinity,   WEBP_QUALITY),
+        ]);
+        fullFormat = 'webp';
+      }
+
+      const sizeLine = isGif
+        ? `Uploading… (thumb ${formatBytes(thumb.size)}, full GIF ${formatBytes(full.size)})`
+        : `Uploading… (thumb ${formatBytes(thumb.size)}, med ${formatBytes(med.size)}, full ${formatBytes(full.size)})`;
+      setStatus(sizeLine, 'info');
+      showOverlay('Uploading…');
       submitBtn.textContent = 'Uploading…';
 
       const form = new FormData();
       form.append('thumb', thumb, 'thumb.webp');
-      form.append('med',   med,   'med.webp');
-      form.append('full',  full,  'full.webp');
+      if (med) form.append('med', med, 'med.webp');
+      form.append('full',  full,  isGif ? 'full.gif' : 'full.webp');
+      form.append('full_format', fullFormat);
       form.append('title',      titleInput.value.trim());
       form.append('source_url', sourceInput.value.trim());
       form.append('tags',       tagsInput.value);
@@ -402,6 +447,7 @@
       setStatus(err.message || 'Something went wrong.', 'error');
     } finally {
       isUploading = false;
+      hideOverlay();
       submitBtn.textContent = originalText;
       setSubmitEnabled();
     }
@@ -411,6 +457,7 @@
     if (isUploading) return;
     isUploading = true;
     submitBtn.disabled = true;
+    showOverlay('Saving…');
     const originalText = submitBtn.textContent;
     submitBtn.textContent = 'Saving…';
     setStatus('Saving…', 'info');
@@ -447,6 +494,7 @@
       setStatus(err.message || 'Something went wrong.', 'error');
     } finally {
       isUploading = false;
+      hideOverlay();
       submitBtn.textContent = originalText;
       submitBtn.disabled = false;
     }

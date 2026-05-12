@@ -33,59 +33,67 @@
 
     <form class="adm-upload" id="adm-upload-form" data-mode="create">
 
-      <div class="adm-drop" id="adm-drop" tabindex="0">
-        <input type="file" id="adm-file" accept="image/*" hidden>
-        <div class="adm-drop__empty" id="adm-drop-empty">
-          <div class="adm-drop__hint">Drop an image here, or click to pick.</div>
-          <div class="adm-drop__sub">JPG / PNG / WebP, max ~30 MB.</div>
+        <div class="adm-drop" id="adm-drop" tabindex="0">
+          <input type="file" id="adm-file" accept="image/*,.jfif" hidden>
+          <div class="adm-drop__empty" id="adm-drop-empty">
+            <div class="adm-drop__hint">Drop an image here, or click to pick.</div>
+            <div class="adm-drop__sub">JPG / JFIF / PNG / WebP / GIF (static), max 10 MB.</div>
+          </div>
+          <div class="adm-drop__preview" id="adm-drop-preview" hidden>
+            <img id="adm-preview-img" alt="">
+            <button type="button" class="adm-drop__clear" id="adm-drop-clear" aria-label="Clear selection">×</button>
+            <div class="adm-drop__meta" id="adm-drop-meta"></div>
+          </div>
         </div>
-        <div class="adm-drop__preview" id="adm-drop-preview" hidden>
-          <img id="adm-preview-img" alt="">
-          <button type="button" class="adm-drop__clear" id="adm-drop-clear" aria-label="Clear selection">×</button>
-          <div class="adm-drop__meta" id="adm-drop-meta"></div>
-        </div>
-      </div>
+      <div>
+        <div class="adm-fields">
 
-      <div class="adm-fields">
-
-        <label class="adm-field">
-          <span class="adm-field__label">Title (optional)</span>
-          <input type="text" id="adm-title" class="adm-field__input" maxlength="200">
-        </label>
-
-        <label class="adm-field">
-          <span class="adm-field__label">Source URL (optional)</span>
-          <input type="url" id="adm-source" class="adm-field__input" placeholder="https://…">
-        </label>
-
-        <label class="adm-field">
-          <span class="adm-field__label">Tags</span>
-          <input type="text" id="adm-tags" class="adm-field__input" placeholder="blonde, erotic, minimal, cyberpunk">
-          <span class="adm-field__hint">Comma-separated.</span>
-        </label>
-
-        <div class="adm-toggles">
-          <label class="adm-toggle">
-            <input type="checkbox" id="adm-nsfw" checked>
-            <span class="adm-toggle__label">NSFW</span>
+          <label class="adm-field">
+            <span class="adm-field__label">Title (optional)</span>
+            <input type="text" id="adm-title" class="adm-field__input" maxlength="200">
           </label>
-          <label class="adm-toggle">
-            <input type="checkbox" id="adm-featured">
-            <span class="adm-toggle__label">Featured</span>
-          </label>
-        </div>
 
+          <label class="adm-field">
+            <span class="adm-field__label">Source URL (optional)</span>
+            <input type="url" id="adm-source" class="adm-field__input" placeholder="https://…">
+          </label>
+
+          <label class="adm-field">
+            <span class="adm-field__label">Tags</span>
+            <input type="text" id="adm-tags" class="adm-field__input" placeholder="blonde, erotic, minimal, cyberpunk">
+            <span class="adm-field__hint">Comma-separated.</span>
+          </label>
+
+          <div class="adm-toggles">
+            <label class="adm-toggle">
+              <input type="checkbox" id="adm-nsfw" checked>
+              <span class="adm-toggle__label">NSFW</span>
+            </label>
+            <label class="adm-toggle">
+              <input type="checkbox" id="adm-featured">
+              <span class="adm-toggle__label">Featured</span>
+            </label>
+          </div>
+
+        </div>
       </div>
 
       <div class="adm-upload__status" id="adm-upload-status" hidden></div>
 
       <button type="submit" class="adm-upload__submit" id="adm-upload-submit" disabled>
-        Add to Aetherica
+        Add Image
       </button>
 
     </form>
 
   </main>
+
+  <div class="adm-overlay" id="adm-overlay" hidden role="status" aria-live="polite">
+    <div class="adm-overlay__inner">
+      <div class="adm-overlay__spinner" aria-hidden="true"></div>
+      <div class="adm-overlay__label" id="adm-overlay-label">Uploading…</div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify@4/dist/tagify.min.js"></script>
   <script src="/aetherica/admin/js/admin.js"></script>
