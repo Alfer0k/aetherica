@@ -19,7 +19,7 @@ export const onRequestGet = async ({ request, env }) => {
        images.height,
        images.created_at,
        (
-         SELECT json_group_array(json_object('namespace', tags.namespace, 'name', tags.name))
+         SELECT json_group_array(tags.name)
            FROM image_tags
            JOIN tags ON tags.id = image_tags.tag_id
           WHERE image_tags.image_id = images.id

@@ -23,11 +23,7 @@
 
   function formatTags(tags) {
     if (!tags || tags.length === 0) return '<span class="adm-row__tags-empty">— no tags —</span>';
-    return tags.map(t => {
-      const label = t.namespace ? `${t.namespace}:${t.name}` : t.name;
-      const cls = t.namespace ? `adm-tag adm-tag--ns-${t.namespace}` : 'adm-tag';
-      return `<span class="${cls}">${escapeHtml(label)}</span>`;
-    }).join('');
+    return tags.map(name => `<span class="adm-tag">${escapeHtml(name)}</span>`).join('');
   }
 
   function escapeHtml(s) {

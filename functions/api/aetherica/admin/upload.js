@@ -2,7 +2,7 @@
 // Multipart form: thumb, med, full (all image/webp blobs) + metadata.
 // Writes 3 R2 objects under {prefix}/{size}.webp, inserts image row, processes tags.
 
-import { parseTags } from '../../../_lib/tags.js';
+import { parseTags, setImageTags } from '../../../_lib/tags.js';
 
 function randomPrefix() {
   // 16 hex chars from random bytes → 64 bits of entropy; plenty for collision-free R2 keys.
@@ -68,23 +68,8 @@ export const onRequestPost = async ({ request, env }) => {
     return Response.json({ error: 'D1 insert failed.', detail: String(err) }, { status: 500 });
   }
 
-  // Tag upserts + image_tag links. Sequential is fine — curator uploads ~tens/day.
-  for (const t of tagList) {
-    await env.DB.prepare(
-      `INSERT INTO tags (namespace, name, count) VALUES (?, ?, 1)
-         ON CONFLICT(namespace, name) DO UPDATE SET count = count + 1`
-    ).bind(t.namespace, t.name).run();
-
-    const row = await env.DB.prepare(
-      `SELECT id FROM tags WHERE namespace = ? AND name = ?`
-    ).bind(t.namespace, t.name).first();
-
-    if (row) {
-      await env.DB.prepare(
-        `INSERT OR IGNORE INTO image_tags (image_id, tag_id) VALUES (?, ?)`
-      ).bind(imageId, row.id).run();
-    }
-  }
+  // Tag upserts via the shared helper (same logic as PATCH).
+  await setImageTags(env, imageId, tagList);
 
   return Response.json({ ok: true, id: imageId, r2_prefix: prefix, tags: tagList.length });
 };

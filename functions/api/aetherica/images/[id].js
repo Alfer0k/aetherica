@@ -1,16 +1,6 @@
-// GET /api/aetherica/images/:id?nsfw=off&tag=ns:name
+// GET /api/aetherica/images/:id?nsfw=off&tag=blonde
 // Returns the image (always, even if it'd be filtered out — direct URL access wins)
 // plus prev_id / next_id confined to whatever filter is currently active.
-
-function parseTagParam(tagParam) {
-  if (!tagParam) return null;
-  const colon = tagParam.indexOf(':');
-  if (colon === -1) return { namespace: '', name: tagParam.toLowerCase() };
-  return {
-    namespace: tagParam.slice(0, colon).toLowerCase(),
-    name:      tagParam.slice(colon + 1).toLowerCase(),
-  };
-}
 
 export const onRequestGet = async ({ request, params, env }) => {
   const id = parseInt(params.id, 10);
@@ -20,13 +10,13 @@ export const onRequestGet = async ({ request, params, env }) => {
 
   const url = new URL(request.url);
   const sfwOnly = url.searchParams.get('nsfw') === 'off';
-  const tag = parseTagParam(url.searchParams.get('tag'));
+  const tag = (url.searchParams.get('tag') || '').trim().toLowerCase() || null;
 
   const row = await env.DB.prepare(
     `SELECT
        id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, created_at,
        (
-         SELECT json_group_array(json_object('namespace', tags.namespace, 'name', tags.name))
+         SELECT json_group_array(tags.name)
            FROM image_tags
            JOIN tags ON tags.id = image_tags.tag_id
           WHERE image_tags.image_id = images.id
@@ -45,9 +35,9 @@ export const onRequestGet = async ({ request, params, env }) => {
   if (tag) {
     extraWhere.push(`id IN (
       SELECT image_id FROM image_tags
-        WHERE tag_id = (SELECT id FROM tags WHERE namespace = ? AND name = ?)
+        WHERE tag_id = (SELECT id FROM tags WHERE name = ?)
     )`);
-    extraArgs.push(tag.namespace, tag.name);
+    extraArgs.push(tag);
   }
   const extraSql = extraWhere.length ? ` AND ${extraWhere.join(' AND ')}` : '';
 

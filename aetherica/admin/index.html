@@ -11,6 +11,7 @@
 
   <link rel="stylesheet" href="/css/variables.css">
   <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@yaireo/tagify@4/dist/tagify.css">
   <link rel="stylesheet" href="/aetherica/admin/css/admin.css">
 </head>
 <body class="adm-body adm-body--upload">
@@ -59,8 +60,8 @@
 
         <label class="adm-field">
           <span class="adm-field__label">Tags</span>
-          <input type="text" id="adm-tags" class="adm-field__input" placeholder="blonde, mood:erotic, style:minimal">
-          <span class="adm-field__hint">Comma-separated. Use <code>medium:</code>, <code>subject:</code>, <code>mood:</code>, <code>style:</code> for namespaced tags.</span>
+          <input type="text" id="adm-tags" class="adm-field__input" placeholder="blonde, erotic, minimal, cyberpunk">
+          <span class="adm-field__hint">Comma-separated.</span>
         </label>
 
         <div class="adm-toggles">
@@ -86,6 +87,7 @@
 
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify@4/dist/tagify.min.js"></script>
   <script src="/aetherica/admin/js/admin.js"></script>
 </body>
 </html>

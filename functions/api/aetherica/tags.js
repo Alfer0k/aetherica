@@ -10,14 +10,14 @@ export const onRequestGet = async ({ request, env }) => {
 
   const stmt = q
     ? env.DB.prepare(
-        `SELECT id, namespace, name, count
+        `SELECT id, name, count
            FROM tags
           WHERE name LIKE ?
        ORDER BY count DESC, name
           LIMIT ?`
       ).bind(q + '%', limit)
     : env.DB.prepare(
-        `SELECT id, namespace, name, count
+        `SELECT id, name, count
            FROM tags
        ORDER BY count DESC, name
           LIMIT ?`
