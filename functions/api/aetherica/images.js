@@ -27,7 +27,7 @@ export const onRequestGet = async ({ request, env }) => {
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   const { results } = await env.DB.prepare(
-    `SELECT id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, created_at
+    `SELECT id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, created_at
        FROM images
        ${whereSql}
    ORDER BY created_at DESC

@@ -8,7 +8,7 @@ import { parseTags, setImageTags } from '../../../../_lib/tags.js';
 async function fetchOne(env, id) {
   const row = await env.DB.prepare(
     `SELECT
-       id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, created_at,
+       id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, created_at,
        (
          SELECT json_group_array(tags.name)
            FROM image_tags
@@ -83,7 +83,7 @@ export const onRequestDelete = async ({ params, env }) => {
   if (!id) return Response.json({ error: 'Bad id.' }, { status: 400 });
 
   const image = await env.DB.prepare(
-    `SELECT r2_prefix FROM images WHERE id = ?`
+    `SELECT r2_prefix, full_format FROM images WHERE id = ?`
   ).bind(id).first();
   if (!image) return Response.json({ error: 'Not found.' }, { status: 404 });
 
@@ -100,10 +100,13 @@ export const onRequestDelete = async ({ params, env }) => {
 
   // R2 cleanup. Best-effort — if R2 errors here, we already lost the DB row,
   // so leaving orphan objects is the lesser evil than refusing the delete.
+  // For animated GIFs, med.webp was never written; the delete on that key is
+  // a harmless no-op (R2 returns ok even when the object doesn't exist).
+  const fullExt = image.full_format === 'gif' ? 'gif' : 'webp';
   await Promise.all([
     env.IMAGES.delete(`${image.r2_prefix}/thumb.webp`),
     env.IMAGES.delete(`${image.r2_prefix}/med.webp`),
-    env.IMAGES.delete(`${image.r2_prefix}/full.webp`),
+    env.IMAGES.delete(`${image.r2_prefix}/full.${fullExt}`),
   ]).catch(() => {});
 
   return Response.json({ ok: true });

@@ -294,6 +294,10 @@
   gap: var(--space-md);
 }
 
+/* Same [hidden]-vs-display gotcha as elsewhere — without this the content
+   stays rendered during loading/error/notfound states. */
+.aeth-detail__content[hidden] { display: none; }
+
 @media (max-width: 720px) {
   .aeth-detail__content {
     grid-template-columns: 1fr;

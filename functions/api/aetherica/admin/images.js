@@ -17,6 +17,7 @@ export const onRequestGet = async ({ request, env }) => {
        images.likes_count,
        images.width,
        images.height,
+       images.full_format,
        images.created_at,
        (
          SELECT json_group_array(tags.name)

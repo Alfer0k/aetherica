@@ -50,8 +50,19 @@ function setState(state) {
   content.hidden = (state !== 'ready');
 }
 
-function medUrl(prefix)  { return `${R2_PUBLIC_URL}/${prefix}/med.webp`; }
-function fullUrl(prefix) { return `${R2_PUBLIC_URL}/${prefix}/full.webp`; }
+// Main display URL on the detail page. For animated GIFs there is no med.webp
+// — the detail page uses full.gif directly so the animation plays in place.
+function mainImageUrl(img) {
+  if (img.full_format === 'gif') {
+    return `${R2_PUBLIC_URL}/${img.r2_prefix}/full.gif`;
+  }
+  return `${R2_PUBLIC_URL}/${img.r2_prefix}/med.webp`;
+}
+
+function fullUrl(img) {
+  const ext = img.full_format === 'gif' ? 'gif' : 'webp';
+  return `${R2_PUBLIC_URL}/${img.r2_prefix}/full.${ext}`;
+}
 
 function formatDate(unix) {
   const d = new Date(unix * 1000);
@@ -124,13 +135,13 @@ async function load() {
     const img = data.image;
     document.title = img.title ? `${img.title} — Aetherica` : `Aetherica — image #${img.id}`;
 
-    imageEl.src = medUrl(img.r2_prefix);
+    imageEl.src = mainImageUrl(img);
     imageEl.alt = img.title || '';
     if (img.width && img.height) {
       imageEl.width  = img.width;
       imageEl.height = img.height;
     }
-    imageLink.href = fullUrl(img.r2_prefix);
+    imageLink.href = fullUrl(img);
 
     titleEl.textContent = img.title || '';
     titleEl.hidden = !img.title;
