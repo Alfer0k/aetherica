@@ -47,7 +47,6 @@
 }
 
 .aeth-topbar__nsfw {
-  margin-left: auto;
   font-family: inherit;
   font-size: var(--text-xs);
   letter-spacing: 0.15em;
@@ -412,11 +411,6 @@
   transform: translateY(-1px);
   border-color: var(--color-border-hover);
 }
-
-.aeth-detail__tag--ns-medium  { color: #b794f4; border-color: rgba(183, 148, 244, 0.3); }
-.aeth-detail__tag--ns-subject { color: #76d1c0; border-color: rgba(118, 209, 192, 0.3); }
-.aeth-detail__tag--ns-mood    { color: #f5a623; border-color: rgba(245, 166, 35, 0.3); }
-.aeth-detail__tag--ns-style   { color: #6cb4ff; border-color: rgba(108, 180, 255, 0.3); }
 
 .aeth-detail__source a {
   color: var(--color-accent-light);

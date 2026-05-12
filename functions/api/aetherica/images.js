@@ -1,26 +1,18 @@
-// GET /api/aetherica/images?limit=50&offset=0&nsfw=off&tag=mood:erotic
+// GET /api/aetherica/images?limit=50&offset=0&nsfw=off&tag=blonde
 // Returns the most recently added images, newest first.
 //
 // Filter params (both optional):
 //   nsfw=off  → only SFW images (nsfw = 0). Anything else (including absent) shows everything.
-//   tag=NS:N  → only images tagged with namespace=NS, name=N. NS:N or N (no colon) for general.
-
-function parseTagParam(tagParam) {
-  if (!tagParam) return null;
-  const colon = tagParam.indexOf(':');
-  if (colon === -1) return { namespace: '', name: tagParam.toLowerCase() };
-  return {
-    namespace: tagParam.slice(0, colon).toLowerCase(),
-    name:      tagParam.slice(colon + 1).toLowerCase(),
-  };
-}
+//   tag=NAME  → only images tagged with NAME (flat — no namespaces).
+//
+// Multi-tag include/exclude lands in Phase 2d.3b; for now single-tag only.
 
 export const onRequestGet = async ({ request, env }) => {
   const url = new URL(request.url);
   const limit  = Math.min(Math.max(parseInt(url.searchParams.get('limit')  || '50', 10), 1), 100);
   const offset = Math.max(parseInt(url.searchParams.get('offset') || '0',  10), 0);
   const sfwOnly = url.searchParams.get('nsfw') === 'off';
-  const tag = parseTagParam(url.searchParams.get('tag'));
+  const tag = (url.searchParams.get('tag') || '').trim().toLowerCase() || null;
 
   const where = [];
   const args  = [];
@@ -28,9 +20,9 @@ export const onRequestGet = async ({ request, env }) => {
   if (tag) {
     where.push(`id IN (
       SELECT image_id FROM image_tags
-        WHERE tag_id = (SELECT id FROM tags WHERE namespace = ? AND name = ?)
+        WHERE tag_id = (SELECT id FROM tags WHERE name = ?)
     )`);
-    args.push(tag.namespace, tag.name);
+    args.push(tag);
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 

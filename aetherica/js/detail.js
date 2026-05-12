@@ -82,14 +82,11 @@ function buildGalleryHref() {
 function renderTags(tags) {
   tagsEl.innerHTML = '';
   if (!tags || !tags.length) return;
-  tags.forEach(t => {
+  tags.forEach(name => {
     const a = document.createElement('a');
-    const label = t.namespace ? `${t.namespace}:${t.name}` : t.name;
-    a.className = t.namespace
-      ? `aeth-detail__tag aeth-detail__tag--ns-${t.namespace}`
-      : 'aeth-detail__tag';
-    a.textContent = label;
-    a.href = `/aetherica/?tag=${encodeURIComponent(label)}`;
+    a.className = 'aeth-detail__tag';
+    a.textContent = name;
+    a.href = `/aetherica/?tag=${encodeURIComponent(name)}`;
     tagsEl.appendChild(a);
   });
 }

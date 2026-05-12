@@ -1,6 +1,8 @@
 // Admin login + logout + upload + edit glue. All pages load this file;
 // each branch runs only if the matching DOM is present.
 
+/* global Tagify */
+
 (function () {
 
   const R2_PUBLIC_URL = 'https://pub-db6629ddb8a843f48242c0317002614e.r2.dev';
@@ -107,13 +109,52 @@
   const cancelLink    = document.getElementById('adm-edit-cancel');
 
   const MAX_INPUT_BYTES = 30 * 1024 * 1024;
-  const THUMB_DIM = 400;
-  const MED_DIM   = 1200;
+  // Thumb: width-based — the gallery is a 3-col masonry where the column
+  // width (not the longest side) is what determines display size. 800px wide
+  // covers 440px CSS columns at 2x retina with headroom.
+  const THUMB_WIDTH = 800;
+  // Med: longest-side — the detail page constrains both width and height
+  // (max-width: 100%, max-height: calc(100vh - 220px)), so longest-side
+  // resize is the right shape. 2000 covers 2x retina at typical viewports.
+  const MED_DIM     = 2000;
   const WEBP_QUALITY = 0.85;
+  const MAX_TAGS_PER_IMAGE = 30; // matches server-side cap in _lib/tags.js
+
+  // Tagify on the tag input — autocomplete from existing tags, chip-style entry.
+  // Output stays as comma-separated string in tagsInput.value so FormData picks
+  // it up and the server's parseTags works unchanged.
+  const tagify = new Tagify(tagsInput, {
+    delimiters: ',',
+    maxTags: MAX_TAGS_PER_IMAGE,
+    whitelist: [],
+    dropdown: {
+      enabled: 1,
+      closeOnSelect: false,
+      maxItems: 10,
+      fuzzySearch: true,
+      classname: 'aeth-tagify-dropdown',
+    },
+    originalInputValueFormat: arr => arr.map(t => t.value).join(','),
+    transformTag: data => { data.value = data.value.trim().toLowerCase(); },
+  });
+
+  // Load existing tags once for autocomplete. Single fetch — for our scale
+  // (<200 tags realistic), it's faster than per-keystroke queries.
+  fetch('/api/aetherica/tags?limit=500')
+    .then(r => r.ok ? r.json() : { tags: [] })
+    .then(data => {
+      tagify.whitelist = (data.tags || []).map(t => t.name);
+    })
+    .catch(() => { /* dropdown just won't autocomplete; manual entry still works */ });
 
   let selectedFile = null;
   let loadedImage = null;
   let previewUrl = null;
+  // Hard guard against double-submission. The disabled-button check isn't
+  // reliable across all paths (Enter key, queued clicks, drag during upload).
+  // This flag is set synchronously at the top of the submit handler and
+  // cleared only in `finally`, so a second submit can never overlap.
+  let isUploading = false;
 
   // Edit mode state — set by initEditMode() if ?edit=ID present.
   const editId = (() => {
@@ -164,10 +205,6 @@
     return `${(n / 1024 / 1024).toFixed(1)} MB`;
   }
 
-  function formatTagsForInput(tags) {
-    return (tags || []).map(t => t.namespace ? `${t.namespace}:${t.name}` : t.name).join(', ');
-  }
-
   function loadImage(file) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -183,6 +220,7 @@
 
   async function selectFile(file) {
     if (isEditMode) return; // image is locked in edit mode
+    if (isUploading) return; // don't allow swapping the staged file mid-upload
     clearStatus();
     if (!file || !file.type.startsWith('image/')) {
       setStatus('That doesn\'t look like an image file.', 'error');
@@ -209,9 +247,22 @@
     }
   }
 
-  function resizeToWebp(img, maxDim, quality) {
+  // Width-based resize: constrain the WIDTH to target, height scales proportionally,
+  // never upscale beyond the source. Use this for thumbs in the masonry layout.
+  function resizeByWidth(img, targetWidth, quality) {
+    const ratio = Math.min(targetWidth / img.naturalWidth, 1);
+    return encodeAtRatio(img, ratio, quality);
+  }
+
+  // Longest-side resize: constrain so neither dimension exceeds maxDim, never
+  // upscale. Use this for med (detail page) and full (no shrink, just transcode).
+  function resizeByMaxDim(img, maxDim, quality) {
+    const ratio = Math.min(maxDim / img.naturalWidth, maxDim / img.naturalHeight, 1);
+    return encodeAtRatio(img, ratio, quality);
+  }
+
+  function encodeAtRatio(img, ratio, quality) {
     return new Promise((resolve, reject) => {
-      const ratio = Math.min(maxDim / img.naturalWidth, maxDim / img.naturalHeight, 1);
       const w = Math.max(1, Math.round(img.naturalWidth * ratio));
       const h = Math.max(1, Math.round(img.naturalHeight * ratio));
       const canvas = document.createElement('canvas');
@@ -283,17 +334,24 @@
   });
 
   async function submitCreate() {
+    if (isUploading) return;
     if (!selectedFile || !loadedImage) return;
 
+    isUploading = true;
     submitBtn.disabled = true;
     const originalText = submitBtn.textContent;
+
+    // Snapshot the staged file refs at submit time so a stray selectFile()
+    // call mid-upload can't poison the metadata fields below.
+    const fileForUpload = selectedFile;
+    const imageForUpload = loadedImage;
 
     try {
       setStatus('Resizing…', 'info');
       const [thumb, med, full] = await Promise.all([
-        resizeToWebp(loadedImage, THUMB_DIM, WEBP_QUALITY),
-        resizeToWebp(loadedImage, MED_DIM,   WEBP_QUALITY),
-        resizeToWebp(loadedImage, Infinity,  WEBP_QUALITY),
+        resizeByWidth (imageForUpload, THUMB_WIDTH, WEBP_QUALITY),
+        resizeByMaxDim(imageForUpload, MED_DIM,     WEBP_QUALITY),
+        resizeByMaxDim(imageForUpload, Infinity,    WEBP_QUALITY),
       ]);
 
       setStatus(`Uploading… (thumb ${formatBytes(thumb.size)}, med ${formatBytes(med.size)}, full ${formatBytes(full.size)})`, 'info');
@@ -308,8 +366,8 @@
       form.append('tags',       tagsInput.value);
       form.append('nsfw',       nsfwInput.checked     ? '1' : '0');
       form.append('featured',   featuredInput.checked ? '1' : '0');
-      form.append('width',      String(loadedImage.naturalWidth));
-      form.append('height',     String(loadedImage.naturalHeight));
+      form.append('width',      String(imageForUpload.naturalWidth));
+      form.append('height',     String(imageForUpload.naturalHeight));
 
       const res = await fetch('/api/aetherica/admin/upload', {
         method: 'POST',
@@ -329,21 +387,29 @@
       const data = await res.json();
       setStatus(`Added image #${data.id}. Tags: ${data.tags}.`, 'success');
 
-      resetSelection();
-      titleInput.value = '';
-      sourceInput.value = '';
-      featuredInput.checked = false;
-      // nsfw + tags stay as-is for fast batch repeats
+      // Only reset if the staged file is still the one we just uploaded
+      // (i.e. nothing else got staged in the meantime — selectFile is gated
+      // by isUploading so this should always hold, but it's cheap to verify).
+      if (selectedFile === fileForUpload) {
+        resetSelection();
+        titleInput.value = '';
+        sourceInput.value = '';
+        featuredInput.checked = false;
+        // nsfw + tags stay as-is for fast batch repeats
+      }
 
     } catch (err) {
       setStatus(err.message || 'Something went wrong.', 'error');
     } finally {
+      isUploading = false;
       submitBtn.textContent = originalText;
       setSubmitEnabled();
     }
   }
 
   async function submitEdit() {
+    if (isUploading) return;
+    isUploading = true;
     submitBtn.disabled = true;
     const originalText = submitBtn.textContent;
     submitBtn.textContent = 'Saving…';
@@ -371,8 +437,6 @@
           if (data && data.error) msg = data.error;
         } catch {}
         setStatus(msg, 'error');
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
         return;
       }
 
@@ -381,6 +445,8 @@
 
     } catch (err) {
       setStatus(err.message || 'Something went wrong.', 'error');
+    } finally {
+      isUploading = false;
       submitBtn.textContent = originalText;
       submitBtn.disabled = false;
     }
@@ -415,9 +481,12 @@
 
       titleInput.value      = img.title      || '';
       sourceInput.value     = img.source_url || '';
-      tagsInput.value       = formatTagsForInput(img.tags);
       nsfwInput.checked     = !!img.nsfw;
       featuredInput.checked = !!img.featured;
+
+      // Tagify owns the tag input — push tags through its API, not the raw element.
+      tagify.removeAllTags();
+      if (img.tags && img.tags.length) tagify.addTags(img.tags);
 
       // Show existing image in the drop zone (med size, no need to load full).
       previewImg.src = `${R2_PUBLIC_URL}/${img.r2_prefix}/med.webp`;
