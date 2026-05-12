@@ -2,9 +2,10 @@
 // the big image, metadata, tags, like button, and prev/next links.
 // Respects two filters:
 //   - NSFW visibility from localStorage (default "on")
-//   - Tag filter from ?tag= URL param (carried into prev/next URLs and API call)
+//   - Multi-tag filter from ?tags= URL param (carried into prev/next URLs + API call)
 
 const R2_PUBLIC_URL = 'https://pub-db6629ddb8a843f48242c0317002614e.r2.dev';
+const MAX_FILTER_TAGS = 20;
 
 const detail        = document.getElementById('aeth-detail');
 const content       = document.getElementById('aeth-detail-content');
@@ -29,8 +30,29 @@ function nsfwOn() {
   return (localStorage.getItem(NSFW_KEY) || 'on') === 'on';
 }
 
-function getActiveTag() {
-  return new URLSearchParams(window.location.search).get('tag') || null;
+// Parse the current URL's ?tags= into {includes, excludes}.
+function getActiveFilter() {
+  const raw = new URLSearchParams(window.location.search).get('tags') || '';
+  const includes = [];
+  const excludes = [];
+  const seen = new Set();
+  for (const piece of raw.split(',')) {
+    if (includes.length + excludes.length >= MAX_FILTER_TAGS) break;
+    let name = piece.trim().toLowerCase();
+    if (!name) continue;
+    const exclude = name.startsWith('-');
+    if (exclude) name = name.slice(1).trim();
+    if (!name) continue;
+    const key = (exclude ? '-' : '+') + name;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    (exclude ? excludes : includes).push(name);
+  }
+  return { includes, excludes };
+}
+
+function serializeFilter({ includes, excludes }) {
+  return [...includes, ...excludes.map(n => '-' + n)].join(',');
 }
 
 function getLikedIds() {
@@ -78,16 +100,32 @@ function renderToggle() {
 }
 
 function buildDetailHref(id) {
-  const tag = getActiveTag();
   const params = new URLSearchParams();
   params.set('id', String(id));
-  if (tag) params.set('tag', tag);
+  const s = serializeFilter(getActiveFilter());
+  if (s) params.set('tags', s);
   return `/aetherica/image?${params.toString()}`;
 }
 
-function buildGalleryHref() {
-  const tag = getActiveTag();
-  return tag ? `/aetherica/?tag=${encodeURIComponent(tag)}` : '/aetherica/';
+function buildGalleryHref(overrideFilter) {
+  const filter = overrideFilter || getActiveFilter();
+  const s = serializeFilter(filter);
+  return s ? `/aetherica/?tags=${encodeURIComponent(s)}` : '/aetherica/';
+}
+
+// Clicking a tag chip on the detail page adds that tag (as an include) to the
+// current filter and jumps back to the gallery. If it's already excluded, the
+// click flips it to include. If it's already included, navigates anyway —
+// gallery shows the same filtered set.
+function buildTagAddHref(name) {
+  const filter = getActiveFilter();
+  filter.excludes = filter.excludes.filter(n => n !== name);
+  if (!filter.includes.includes(name)) {
+    if (filter.includes.length + filter.excludes.length < MAX_FILTER_TAGS) {
+      filter.includes.push(name);
+    }
+  }
+  return buildGalleryHref(filter);
 }
 
 function renderTags(tags) {
@@ -97,7 +135,7 @@ function renderTags(tags) {
     const a = document.createElement('a');
     a.className = 'aeth-detail__tag';
     a.textContent = name;
-    a.href = `/aetherica/?tag=${encodeURIComponent(name)}`;
+    a.href = buildTagAddHref(name);
     tagsEl.appendChild(a);
   });
 }
@@ -123,8 +161,8 @@ async function load() {
   try {
     const params = new URLSearchParams();
     if (!nsfwOn()) params.set('nsfw', 'off');
-    const tag = getActiveTag();
-    if (tag) params.set('tag', tag);
+    const s = serializeFilter(getActiveFilter());
+    if (s) params.set('tags', s);
 
     const url = `/api/aetherica/images/${id}${params.toString() ? `?${params}` : ''}`;
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
