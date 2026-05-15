@@ -8,7 +8,7 @@ import { parseTags, setImageTags } from '../../../../_lib/tags.js';
 async function fetchOne(env, id) {
   const row = await env.DB.prepare(
     `SELECT
-       id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, created_at,
+       id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, curator_rating, created_at,
        (
          SELECT json_group_array(tags.name)
            FROM image_tags
@@ -61,6 +61,12 @@ export const onRequestPatch = async ({ request, params, env }) => {
   if ('source_url' in body) { updates.push('source_url = ?'); values.push(body.source_url?.toString().trim() || null); }
   if ('nsfw'       in body) { updates.push('nsfw = ?');       values.push(body.nsfw     ? 1 : 0); }
   if ('featured'   in body) { updates.push('featured = ?');   values.push(body.featured ? 1 : 0); }
+  if ('curator_rating' in body) {
+    const r = parseInt(body.curator_rating, 10);
+    const clamped = Number.isFinite(r) ? Math.min(10, Math.max(0, r)) : 5;
+    updates.push('curator_rating = ?');
+    values.push(clamped);
+  }
 
   if (updates.length) {
     values.push(id);

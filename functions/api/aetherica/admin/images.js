@@ -18,6 +18,7 @@ export const onRequestGet = async ({ request, env }) => {
        images.width,
        images.height,
        images.full_format,
+       images.curator_rating,
        images.created_at,
        (
          SELECT json_group_array(tags.name)

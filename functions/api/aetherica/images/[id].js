@@ -35,10 +35,12 @@ export const onRequestGet = async ({ request, params, env }) => {
   const url = new URL(request.url);
   const sfwOnly = url.searchParams.get('nsfw') === 'off';
   const { includes, excludes } = parseTagsParam(url.searchParams.get('tags'));
+  const ratingMinRaw = parseInt(url.searchParams.get('rating_min') || '', 10);
+  const ratingMin = Number.isFinite(ratingMinRaw) ? Math.min(10, Math.max(0, ratingMinRaw)) : null;
 
   const row = await env.DB.prepare(
     `SELECT
-       id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, created_at,
+       id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, curator_rating, created_at,
        (
          SELECT json_group_array(tags.name)
            FROM image_tags
@@ -56,6 +58,10 @@ export const onRequestGet = async ({ request, params, env }) => {
   const extraWhere = [];
   const extraArgs  = [];
   if (sfwOnly) extraWhere.push('nsfw = 0');
+  if (ratingMin !== null && ratingMin > 0) {
+    extraWhere.push('curator_rating >= ?');
+    extraArgs.push(ratingMin);
+  }
   for (const name of includes) {
     extraWhere.push(`id IN (
       SELECT image_id FROM image_tags

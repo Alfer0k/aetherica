@@ -39,10 +39,16 @@ export const onRequestGet = async ({ request, env }) => {
   const offset = Math.max(parseInt(url.searchParams.get('offset') || '0',  10), 0);
   const sfwOnly = url.searchParams.get('nsfw') === 'off';
   const { includes, excludes } = parseTagsParam(url.searchParams.get('tags'));
+  const ratingMinRaw = parseInt(url.searchParams.get('rating_min') || '', 10);
+  const ratingMin = Number.isFinite(ratingMinRaw) ? Math.min(10, Math.max(0, ratingMinRaw)) : null;
 
   const where = [];
   const args  = [];
   if (sfwOnly) where.push('nsfw = 0');
+  if (ratingMin !== null && ratingMin > 0) {
+    where.push('curator_rating >= ?');
+    args.push(ratingMin);
+  }
 
   // Each include is its own subquery: image must be tagged with this specific name.
   // AND-ing them means the image must satisfy every included tag.
@@ -67,7 +73,7 @@ export const onRequestGet = async ({ request, env }) => {
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   const { results } = await env.DB.prepare(
-    `SELECT id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, created_at
+    `SELECT id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, curator_rating, created_at
        FROM images
        ${whereSql}
    ORDER BY created_at DESC

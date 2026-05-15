@@ -55,6 +55,11 @@ function serializeFilter({ includes, excludes }) {
   return [...includes, ...excludes.map(n => '-' + n)].join(',');
 }
 
+function getActiveRatingMin() {
+  const raw = parseInt(new URLSearchParams(window.location.search).get('rating_min') || '', 10);
+  return Number.isFinite(raw) && raw > 0 ? Math.min(10, raw) : 0;
+}
+
 function getLikedIds() {
   try {
     return new Set(JSON.parse(localStorage.getItem(LIKED_KEY) || '[]'));
@@ -104,13 +109,20 @@ function buildDetailHref(id) {
   params.set('id', String(id));
   const s = serializeFilter(getActiveFilter());
   if (s) params.set('tags', s);
+  const rm = getActiveRatingMin();
+  if (rm > 0) params.set('rating_min', String(rm));
   return `/aetherica/image?${params.toString()}`;
 }
 
 function buildGalleryHref(overrideFilter) {
   const filter = overrideFilter || getActiveFilter();
+  const rm = getActiveRatingMin();
+  const params = new URLSearchParams();
   const s = serializeFilter(filter);
-  return s ? `/aetherica/?tags=${encodeURIComponent(s)}` : '/aetherica/';
+  if (s) params.set('tags', s);
+  if (rm > 0) params.set('rating_min', String(rm));
+  const qs = params.toString();
+  return qs ? `/aetherica/?${qs}` : '/aetherica/';
 }
 
 // Clicking a tag chip on the detail page adds that tag (as an include) to the
@@ -163,6 +175,8 @@ async function load() {
     if (!nsfwOn()) params.set('nsfw', 'off');
     const s = serializeFilter(getActiveFilter());
     if (s) params.set('tags', s);
+    const rm = getActiveRatingMin();
+    if (rm > 0) params.set('rating_min', String(rm));
 
     const url = `/api/aetherica/images/${id}${params.toString() ? `?${params}` : ''}`;
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
@@ -185,6 +199,7 @@ async function load() {
     titleEl.hidden = !img.title;
 
     const metaParts = [`#${img.id}`, formatDate(img.created_at)];
+    if (typeof img.curator_rating === 'number') metaParts.push(`Curator ★ ${img.curator_rating}/10`);
     if (img.featured) metaParts.push('★ Featured');
     metaEl.textContent = metaParts.join(' · ');
 

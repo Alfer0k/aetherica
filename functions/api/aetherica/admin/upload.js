@@ -58,6 +58,9 @@ export const onRequestPost = async ({ request, env }) => {
   const tagList    = parseTags(tagsRaw);
   const width      = parseInt(form.get('width')  || '0', 10) || null;
   const height     = parseInt(form.get('height') || '0', 10) || null;
+  // Clamp curator rating to 0-10. Default 5 if missing or invalid.
+  const ratingRaw  = parseInt(form.get('curator_rating') || '5', 10);
+  const curatorRating = Number.isFinite(ratingRaw) ? Math.min(10, Math.max(0, ratingRaw)) : 5;
 
   const prefix = randomPrefix();
   const now    = Math.floor(Date.now() / 1000);
@@ -76,9 +79,9 @@ export const onRequestPost = async ({ request, env }) => {
   let imageId;
   try {
     const res = await env.DB.prepare(
-      `INSERT INTO images (r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, created_at)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`
-    ).bind(prefix, title, sourceUrl, nsfw, featured, width, height, fullFormat, now).run();
+      `INSERT INTO images (r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, curator_rating, created_at)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`
+    ).bind(prefix, title, sourceUrl, nsfw, featured, width, height, fullFormat, curatorRating, now).run();
     imageId = res.meta.last_row_id;
   } catch (err) {
     // Try to clean up R2 objects we just wrote so we don't leave orphans.
