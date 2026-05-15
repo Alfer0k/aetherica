@@ -40,6 +40,9 @@
     const title = img.title ? escapeHtml(img.title) : '<span class="adm-row__title-empty">Untitled</span>';
 
     const badges = [];
+    if (typeof img.curator_rating === 'number') {
+      badges.push(`<span class="adm-badge adm-badge--rating">★ ${img.curator_rating}/10</span>`);
+    }
     if (img.nsfw)     badges.push('<span class="adm-badge adm-badge--nsfw">NSFW</span>');
     if (img.featured) badges.push('<span class="adm-badge adm-badge--featured">★ Featured</span>');
 

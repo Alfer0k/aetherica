@@ -23,6 +23,7 @@ const panelList       = document.getElementById('aeth-filter-panel-list');
 const panelSearch     = document.getElementById('aeth-filter-search');
 const panelClear      = document.getElementById('aeth-filter-panel-clear');
 const panelApply      = document.getElementById('aeth-filter-panel-apply');
+const panelRating     = document.getElementById('aeth-filter-rating');
 
 // ---------- helpers ----------
 
@@ -64,24 +65,31 @@ function serializeFilter({ includes, excludes }) {
   return [...includes, ...excludes.map(n => '-' + n)].join(',');
 }
 
-function buildGalleryHref(filter) {
+function getActiveRatingMin() {
+  const raw = parseInt(new URLSearchParams(window.location.search).get('rating_min') || '', 10);
+  return Number.isFinite(raw) && raw > 0 ? Math.min(10, raw) : 0;
+}
+
+function buildGalleryHref(filter, ratingMin) {
   const params = new URLSearchParams();
   const s = serializeFilter(filter);
   if (s) params.set('tags', s);
+  if (ratingMin && ratingMin > 0) params.set('rating_min', String(ratingMin));
   const qs = params.toString();
   return qs ? `/aetherica/?${qs}` : '/aetherica/';
 }
 
-function buildDetailHref(id, filter) {
+function buildDetailHref(id, filter, ratingMin) {
   const params = new URLSearchParams();
   params.set('id', String(id));
   const s = serializeFilter(filter);
   if (s) params.set('tags', s);
+  if (ratingMin && ratingMin > 0) params.set('rating_min', String(ratingMin));
   return `/aetherica/image?${params.toString()}`;
 }
 
-function totalTagCount(filter) {
-  return filter.includes.length + filter.excludes.length;
+function totalActiveFilterCount(filter, ratingMin) {
+  return filter.includes.length + filter.excludes.length + (ratingMin > 0 ? 1 : 0);
 }
 
 // ---------- top NSFW toggle (unchanged behavior) ----------
@@ -105,7 +113,8 @@ if (toggleBtn) {
 
 function renderBanner() {
   const filter = getActiveFilter();
-  const total = totalTagCount(filter);
+  const ratingMin = getActiveRatingMin();
+  const total = totalActiveFilterCount(filter, ratingMin);
   if (total === 0) {
     filterBox.hidden = true;
     filterBtnCount.hidden = true;
@@ -119,28 +128,34 @@ function renderBanner() {
   filterBtn.classList.add('aeth-filter-btn--active');
 
   filterChips.innerHTML = '';
-  const append = (name, kind) => {
+  const append = (label, kind, onRemove) => {
     const chip = document.createElement('span');
     chip.className = `aeth-filter__chip aeth-filter__chip--${kind}`;
-    chip.innerHTML = `<span class="aeth-filter__chip-name">${kind === 'exclude' ? '−' : ''}${escapeHtml(name)}</span>`;
+    chip.innerHTML = `<span class="aeth-filter__chip-name">${kind === 'exclude' ? '−' : ''}${escapeHtml(label)}</span>`;
     const x = document.createElement('button');
     x.type = 'button';
     x.className = 'aeth-filter__chip-x';
-    x.setAttribute('aria-label', `Remove filter ${name}`);
+    x.setAttribute('aria-label', `Remove filter ${label}`);
     x.textContent = '×';
-    x.addEventListener('click', () => removeChip(name, kind));
+    x.addEventListener('click', onRemove);
     chip.appendChild(x);
     filterChips.appendChild(chip);
   };
-  filter.includes.forEach(n => append(n, 'include'));
-  filter.excludes.forEach(n => append(n, 'exclude'));
+  filter.includes.forEach(n => append(n, 'include', () => removeChip(n, 'include')));
+  filter.excludes.forEach(n => append(n, 'exclude', () => removeChip(n, 'exclude')));
+  if (ratingMin > 0) {
+    append(`★ ${ratingMin}+`, 'include', () => {
+      window.location.href = buildGalleryHref(filter, 0);
+    });
+  }
 }
 
 function removeChip(name, kind) {
   const filter = getActiveFilter();
+  const ratingMin = getActiveRatingMin();
   if (kind === 'include') filter.includes = filter.includes.filter(n => n !== name);
   else filter.excludes = filter.excludes.filter(n => n !== name);
-  window.location.href = buildGalleryHref(filter);
+  window.location.href = buildGalleryHref(filter, ratingMin);
 }
 
 if (filterClearAll) {
@@ -156,10 +171,10 @@ function escapeHtml(s) {
 
 // ---------- card rendering ----------
 
-function renderCard(img, filter) {
+function renderCard(img, filter, ratingMin) {
   const a = document.createElement('a');
   a.className = 'aeth-card';
-  a.href = buildDetailHref(img.id, filter);
+  a.href = buildDetailHref(img.id, filter, ratingMin);
   a.setAttribute('data-id', img.id);
   if (img.featured) a.classList.add('aeth-card--featured');
 
@@ -195,6 +210,7 @@ function renderCard(img, filter) {
 async function load() {
   setState('loading');
   const filter = getActiveFilter();
+  const ratingMin = getActiveRatingMin();
   try {
     const params = new URLSearchParams();
     params.set('limit',  String(PAGE_SIZE));
@@ -202,6 +218,7 @@ async function load() {
     if (!nsfwOn()) params.set('nsfw', 'off');
     const s = serializeFilter(filter);
     if (s) params.set('tags', s);
+    if (ratingMin > 0) params.set('rating_min', String(ratingMin));
 
     const res = await fetch(`/api/aetherica/images?${params.toString()}`, {
       headers: { 'Accept': 'application/json' },
@@ -218,7 +235,7 @@ async function load() {
     }
 
     const frag = document.createDocumentFragment();
-    images.forEach(img => frag.appendChild(renderCard(img, filter)));
+    images.forEach(img => frag.appendChild(renderCard(img, filter, ratingMin)));
     grid.appendChild(frag);
     setState('ready');
   } catch (err) {
@@ -229,8 +246,9 @@ async function load() {
 
 // ---------- filter panel ----------
 
-let allTags = [];     // [{name, count}, ...] from /api/aetherica/tags
-let panelState = {};  // {tagName: 'include' | 'exclude'}, derived from URL on open
+let allTags = [];        // [{name, count}, ...] from /api/aetherica/tags
+let panelState = {};     // {tagName: 'include' | 'exclude'}, derived from URL on open
+let panelRatingMin = 0;  // 0 = "Any" (no filter)
 
 function openPanel() {
   panel.hidden = false;
@@ -241,8 +259,28 @@ function openPanel() {
   const filter = getActiveFilter();
   filter.includes.forEach(n => { panelState[n] = 'include'; });
   filter.excludes.forEach(n => { panelState[n] = 'exclude'; });
+  panelRatingMin = getActiveRatingMin();
   renderPanelList();
+  renderPanelRating();
   setTimeout(() => panelSearch?.focus(), 50);
+}
+
+function renderPanelRating() {
+  if (!panelRating) return;
+  panelRating.querySelectorAll('.aeth-filter-panel__rating-pill').forEach(btn => {
+    const v = parseInt(btn.dataset.val, 10);
+    btn.classList.toggle('aeth-filter-panel__rating-pill--selected', v === panelRatingMin);
+  });
+}
+
+if (panelRating) {
+  panelRating.addEventListener('click', (e) => {
+    const btn = e.target.closest('.aeth-filter-panel__rating-pill');
+    if (!btn) return;
+    const v = parseInt(btn.dataset.val, 10);
+    panelRatingMin = (panelRatingMin === v && v !== 0) ? 0 : v;
+    renderPanelRating();
+  });
 }
 
 function closePanel() {
@@ -335,7 +373,9 @@ panelSearch.addEventListener('input', renderPanelList);
 
 panelClear.addEventListener('click', () => {
   panelState = {};
+  panelRatingMin = 0;
   renderPanelList();
+  renderPanelRating();
 });
 
 panelApply.addEventListener('click', () => {
@@ -345,7 +385,7 @@ panelApply.addEventListener('click', () => {
     if (state === 'include') includes.push(name);
     else if (state === 'exclude') excludes.push(name);
   }
-  window.location.href = buildGalleryHref({ includes, excludes });
+  window.location.href = buildGalleryHref({ includes, excludes }, panelRatingMin);
 });
 
 // ---------- init ----------

@@ -109,6 +109,27 @@
   const cancelLink    = document.getElementById('adm-edit-cancel');
   const overlay       = document.getElementById('adm-overlay');
   const overlayLabel  = document.getElementById('adm-overlay-label');
+  const ratingGroup   = document.getElementById('adm-rating');
+
+  // Curator rating pill row — 0..10, defaults to 5. Held in this closure
+  // and read at submit time so it stays consistent with the visible state.
+  let curatorRating = 5;
+  function setRating(v) {
+    const n = Math.min(10, Math.max(0, parseInt(v, 10) || 0));
+    curatorRating = n;
+    if (!ratingGroup) return;
+    ratingGroup.querySelectorAll('.adm-rating__pill').forEach(btn => {
+      btn.classList.toggle('adm-rating__pill--selected', parseInt(btn.dataset.val, 10) === n);
+    });
+  }
+  if (ratingGroup) {
+    ratingGroup.addEventListener('click', (e) => {
+      const btn = e.target.closest('.adm-rating__pill');
+      if (!btn) return;
+      setRating(btn.dataset.val);
+    });
+    setRating(5);
+  }
 
   function showOverlay(label) {
     if (!overlay) return;
@@ -413,6 +434,7 @@
       form.append('featured',   featuredInput.checked ? '1' : '0');
       form.append('width',      String(imageForUpload.naturalWidth));
       form.append('height',     String(imageForUpload.naturalHeight));
+      form.append('curator_rating', String(curatorRating));
 
       const res = await fetch('/api/aetherica/admin/upload', {
         method: 'POST',
@@ -440,6 +462,7 @@
         titleInput.value = '';
         sourceInput.value = '';
         featuredInput.checked = false;
+        setRating(5);
         // nsfw + tags stay as-is for fast batch repeats
       }
 
@@ -464,11 +487,12 @@
 
     try {
       const body = {
-        title:      titleInput.value.trim(),
-        source_url: sourceInput.value.trim(),
-        tags:       tagsInput.value,
-        nsfw:       nsfwInput.checked,
-        featured:   featuredInput.checked,
+        title:          titleInput.value.trim(),
+        source_url:     sourceInput.value.trim(),
+        tags:           tagsInput.value,
+        nsfw:           nsfwInput.checked,
+        featured:       featuredInput.checked,
+        curator_rating: curatorRating,
       };
 
       const res = await fetch(`/api/aetherica/admin/images/${editId}`, {
@@ -531,6 +555,7 @@
       sourceInput.value     = img.source_url || '';
       nsfwInput.checked     = !!img.nsfw;
       featuredInput.checked = !!img.featured;
+      setRating(typeof img.curator_rating === 'number' ? img.curator_rating : 5);
 
       // Tagify owns the tag input — push tags through its API, not the raw element.
       tagify.removeAllTags();

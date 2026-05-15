@@ -17,10 +17,11 @@ CREATE TABLE IF NOT EXISTS images (
   nsfw         INTEGER NOT NULL DEFAULT 0,   -- 0 = SFW, 1 = NSFW
   featured     INTEGER NOT NULL DEFAULT 0,   -- 0 / 1, curator editorial highlight
   likes_count  INTEGER NOT NULL DEFAULT 0,   -- denormalized; updated by like endpoint
-  width        INTEGER,                      -- intrinsic px, captured at upload time
-  height       INTEGER,
-  full_format  TEXT    NOT NULL DEFAULT 'webp', -- 'webp' for stills, 'gif' for animated
-  created_at   INTEGER NOT NULL              -- unix epoch seconds
+  width          INTEGER,                    -- intrinsic px, captured at upload time
+  height         INTEGER,
+  full_format    TEXT    NOT NULL DEFAULT 'webp',  -- 'webp' for stills, 'gif' for animated
+  curator_rating INTEGER NOT NULL DEFAULT 5,       -- 0-10, editorial signal from the curator
+  created_at     INTEGER NOT NULL              -- unix epoch seconds
 );
 
 CREATE INDEX IF NOT EXISTS idx_images_created  ON images(created_at DESC);
