@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS images (
   height         INTEGER,
   full_format    TEXT    NOT NULL DEFAULT 'webp',  -- 'webp' for stills, 'gif' for animated
   curator_rating INTEGER NOT NULL DEFAULT 5,       -- 0-10, editorial signal from the curator
+  total_bytes    INTEGER NOT NULL DEFAULT 0,       -- sum of thumb + med + full sizes on R2
   created_at     INTEGER NOT NULL              -- unix epoch seconds
 );
 

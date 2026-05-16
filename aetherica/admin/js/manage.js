@@ -21,6 +21,21 @@
     return d.toISOString().slice(0, 10);
   }
 
+  function formatBytes(n) {
+    if (!n) return '';
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+    return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  // Colour-tier the size badge so heavy images jump out at scan.
+  function sizeTier(bytes) {
+    if (!bytes) return '';
+    if (bytes >= 5 * 1024 * 1024) return 'high';     // > 5 MB total
+    if (bytes >= 2 * 1024 * 1024) return 'mid';      // > 2 MB total
+    return 'low';
+  }
+
   function formatTags(tags) {
     if (!tags || tags.length === 0) return '<span class="adm-row__tags-empty">— no tags —</span>';
     return tags.map(name => `<span class="adm-tag">${escapeHtml(name)}</span>`).join('');
@@ -45,6 +60,9 @@
     }
     if (img.nsfw)     badges.push('<span class="adm-badge adm-badge--nsfw">NSFW</span>');
     if (img.featured) badges.push('<span class="adm-badge adm-badge--featured">★ Featured</span>');
+    if (img.total_bytes) {
+      badges.push(`<span class="adm-badge adm-badge--size adm-badge--size-${sizeTier(img.total_bytes)}">${formatBytes(img.total_bytes)}</span>`);
+    }
 
     row.innerHTML = `
       <a class="adm-row__thumb" href="/aetherica/admin/?edit=${img.id}" aria-label="Edit image ${img.id}">

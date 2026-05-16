@@ -8,7 +8,7 @@ import { parseTags, setImageTags } from '../../../../_lib/tags.js';
 async function fetchOne(env, id) {
   const row = await env.DB.prepare(
     `SELECT
-       id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, curator_rating, created_at,
+       id, r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, curator_rating, total_bytes, created_at,
        (
          SELECT json_group_array(tags.name)
            FROM image_tags
