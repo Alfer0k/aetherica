@@ -35,7 +35,10 @@ function parseTagsParam(raw) {
 
 export const onRequestGet = async ({ request, env }) => {
   const url = new URL(request.url);
-  const limit  = Math.min(Math.max(parseInt(url.searchParams.get('limit')  || '50', 10), 1), 100);
+  // Cap raised to 500 so the gallery can fetch the full matching set in one
+  // request and shuffle client-side for randomized order. Revisit if the
+  // catalog ever exceeds this — then we move to server-side random sampling.
+  const limit  = Math.min(Math.max(parseInt(url.searchParams.get('limit')  || '50', 10), 1), 500);
   const offset = Math.max(parseInt(url.searchParams.get('offset') || '0',  10), 0);
   const sfwOnly = url.searchParams.get('nsfw') === 'off';
   const { includes, excludes } = parseTagsParam(url.searchParams.get('tags'));

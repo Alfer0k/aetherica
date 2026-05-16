@@ -209,86 +209,90 @@ function renderCard(img, filter, ratingMin) {
   return a;
 }
 
-// Pagination state — module-local. Reset by load(), advanced by loadMore().
-let currentOffset = 0;
-let hasMore = false;
-let isLoadingMore = false;
-
-async function fetchPage(offset) {
-  const filter = getActiveFilter();
-  const ratingMin = getActiveRatingMin();
-  const params = new URLSearchParams();
-  params.set('limit',  String(PAGE_SIZE));
-  params.set('offset', String(offset));
-  if (!nsfwOn()) params.set('nsfw', 'off');
-  const s = serializeFilter(filter);
-  if (s) params.set('tags', s);
-  if (ratingMin > 0) params.set('rating_min', String(ratingMin));
-
-  const res = await fetch(`/api/aetherica/images?${params.toString()}`, {
-    headers: { 'Accept': 'application/json' },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  return { images: data.images || [], filter, ratingMin };
-}
+// State for the random-order + in-memory pagination model.
+// We fetch the full matching set once, shuffle, and reveal in PAGE_SIZE slices.
+let shuffledImages = [];
+let renderedCount = 0;
+let activeFilter = { includes: [], excludes: [] };
+let activeRatingMin = 0;
 
 function setLoadMoreVisible(visible) {
   loadMoreWrap.hidden = !visible;
 }
 
+// Fisher-Yates in place. Math.random reseeds per page load, so every visit
+// to the gallery sees a fresh order.
+function shuffleInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 async function load() {
   setState('loading');
   setLoadMoreVisible(false);
-  currentOffset = 0;
-  hasMore = false;
+  shuffledImages = [];
+  renderedCount = 0;
+  activeFilter = getActiveFilter();
+  activeRatingMin = getActiveRatingMin();
+
   try {
-    const { images, filter, ratingMin } = await fetchPage(0);
+    const params = new URLSearchParams();
+    params.set('limit', '500');
+    if (!nsfwOn()) params.set('nsfw', 'off');
+    const s = serializeFilter(activeFilter);
+    if (s) params.set('tags', s);
+    if (activeRatingMin > 0) params.set('rating_min', String(activeRatingMin));
+
+    const res = await fetch(`/api/aetherica/images?${params.toString()}`, {
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    shuffledImages = shuffleInPlace(data.images || []);
+
     grid.querySelectorAll('.aeth-card').forEach(el => el.remove());
 
-    if (images.length === 0) {
+    if (shuffledImages.length === 0) {
       setState('empty');
       return;
     }
 
-    const frag = document.createDocumentFragment();
-    images.forEach(img => frag.appendChild(renderCard(img, filter, ratingMin)));
-    grid.appendChild(frag);
+    renderSlice();
     setState('ready');
-
-    currentOffset = images.length;
-    hasMore = images.length === PAGE_SIZE;
-    setLoadMoreVisible(hasMore);
   } catch (err) {
     console.error('[aetherica] failed to load images', err);
     setState('error');
   }
 }
 
+// Append the next PAGE_SIZE shuffled images to the grid and toggle the button.
+function renderSlice() {
+  const next = shuffledImages.slice(renderedCount, renderedCount + PAGE_SIZE);
+  if (next.length === 0) {
+    setLoadMoreVisible(false);
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  next.forEach(img => frag.appendChild(renderCard(img, activeFilter, activeRatingMin)));
+  grid.appendChild(frag);
+  renderedCount += next.length;
+  setLoadMoreVisible(renderedCount < shuffledImages.length);
+}
+
+let isLoadingMore = false;
 async function loadMore() {
-  if (isLoadingMore || !hasMore) return;
+  if (isLoadingMore) return;
+  if (renderedCount >= shuffledImages.length) return;
   isLoadingMore = true;
   loadMoreBtn.disabled = true;
   const originalText = loadMoreBtn.textContent;
   loadMoreBtn.textContent = 'Loading…';
   try {
-    const { images, filter, ratingMin } = await fetchPage(currentOffset);
-    if (images.length === 0) {
-      hasMore = false;
-      setLoadMoreVisible(false);
-      return;
-    }
-
-    const frag = document.createDocumentFragment();
-    images.forEach(img => frag.appendChild(renderCard(img, filter, ratingMin)));
-    grid.appendChild(frag);
-
-    currentOffset += images.length;
-    hasMore = images.length === PAGE_SIZE;
-    setLoadMoreVisible(hasMore);
-  } catch (err) {
-    console.error('[aetherica] load more failed', err);
-    // Keep the button visible so the user can retry.
+    // No network — slice from the already-shuffled in-memory array.
+    renderSlice();
   } finally {
     isLoadingMore = false;
     loadMoreBtn.disabled = false;
