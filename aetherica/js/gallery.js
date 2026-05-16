@@ -14,7 +14,6 @@ const filterBox  = document.getElementById('aeth-filter');
 const filterChips    = document.getElementById('aeth-filter-chips');
 const filterClearAll = document.getElementById('aeth-filter-clear');
 const loadMoreWrap = document.getElementById('aeth-loadmore');
-const loadMoreBtn  = document.getElementById('aeth-loadmore-btn');
 
 const filterBtn       = document.getElementById('aeth-filter-btn');
 const filterBtnCount  = document.getElementById('aeth-filter-btn-count');
@@ -283,34 +282,25 @@ function renderSlice() {
 }
 
 let isLoadingMore = false;
-async function loadMore() {
+function loadMore() {
   if (isLoadingMore) return;
   if (renderedCount >= shuffledImages.length) return;
   isLoadingMore = true;
-  loadMoreBtn.disabled = true;
-  const originalText = loadMoreBtn.textContent;
-  loadMoreBtn.textContent = 'Loading…';
   try {
     // No network — slice from the already-shuffled in-memory array.
     renderSlice();
   } finally {
     isLoadingMore = false;
-    loadMoreBtn.disabled = false;
-    loadMoreBtn.textContent = originalText;
   }
 }
 
-if (loadMoreBtn) {
-  loadMoreBtn.addEventListener('click', loadMore);
-}
-
-// Auto-trigger when the button scrolls into view — infinite-scroll feel
-// without surrendering the visible affordance. `rootMargin` fires slightly
-// before the button is fully visible so the next page is ready when you arrive.
+// Invisible sentinel at the bottom of the grid — when it scrolls into view
+// (with a 400px pre-trigger margin) we reveal the next slice. loadMore()
+// itself guards against firing past the end, so no extra checks needed here.
 if ('IntersectionObserver' in window && loadMoreWrap) {
   const io = new IntersectionObserver((entries) => {
     for (const entry of entries) {
-      if (entry.isIntersecting && hasMore && !isLoadingMore) {
+      if (entry.isIntersecting) {
         loadMore();
       }
     }
