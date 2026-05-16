@@ -28,6 +28,17 @@
     <div class="adm-page__header">
       <h1 class="adm-page__title">Manage images</h1>
       <span class="adm-page__count" id="adm-list-count"></span>
+      <label class="adm-page__sort">
+        <span class="adm-page__sort-label">Sort</span>
+        <select id="adm-sort">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="largest">Largest first</option>
+          <option value="smallest">Smallest first</option>
+          <option value="rating-high">Highest rated</option>
+          <option value="rating-low">Lowest rated</option>
+        </select>
+      </label>
     </div>
 
     <div class="adm-list" id="adm-list" data-state="loading">

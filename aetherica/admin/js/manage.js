@@ -6,7 +6,24 @@
 
   const list      = document.getElementById('adm-list');
   const countSpan = document.getElementById('adm-list-count');
+  const sortSel   = document.getElementById('adm-sort');
   if (!list) return;
+
+  // Kept in memory so sort changes don't need to refetch.
+  let loadedImages = [];
+
+  const SORTERS = {
+    'newest':      (a, b) => b.created_at  - a.created_at,
+    'oldest':      (a, b) => a.created_at  - b.created_at,
+    'largest':     (a, b) => (b.total_bytes || 0) - (a.total_bytes || 0),
+    'smallest':    (a, b) => (a.total_bytes || 0) - (b.total_bytes || 0),
+    'rating-high': (a, b) => (b.curator_rating ?? 0) - (a.curator_rating ?? 0) || (b.created_at - a.created_at),
+    'rating-low':  (a, b) => (a.curator_rating ?? 0) - (b.curator_rating ?? 0) || (b.created_at - a.created_at),
+  };
+
+  function currentSort() {
+    return SORTERS[sortSel?.value] ? sortSel.value : 'newest';
+  }
 
   function setState(state) {
     list.dataset.state = state;
@@ -108,6 +125,7 @@
           return;
         }
         row.remove();
+        loadedImages = loadedImages.filter(x => x.id !== img.id);
         updateCount(-1);
         // If list is now empty, swap to empty state.
         if (!list.querySelector('.adm-row')) {
@@ -129,35 +147,42 @@
     countSpan.textContent = currentCount > 0 ? `${currentCount} image${currentCount === 1 ? '' : 's'}` : '';
   }
 
+  function renderList() {
+    list.querySelectorAll('.adm-row').forEach(el => el.remove());
+
+    if (loadedImages.length === 0) {
+      currentCount = 0;
+      countSpan.textContent = '';
+      setState('empty');
+      return;
+    }
+
+    const sorted = [...loadedImages].sort(SORTERS[currentSort()]);
+    const frag = document.createDocumentFragment();
+    sorted.forEach(img => frag.appendChild(renderRow(img)));
+    list.appendChild(frag);
+
+    currentCount = loadedImages.length;
+    countSpan.textContent = `${currentCount} image${currentCount === 1 ? '' : 's'}`;
+    setState('ready');
+  }
+
   async function load() {
     setState('loading');
     try {
       const res = await fetch('/api/aetherica/admin/images?limit=500');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      const images = data.images || [];
-
-      // Wipe any previous rows but keep state divs.
-      list.querySelectorAll('.adm-row').forEach(el => el.remove());
-
-      if (images.length === 0) {
-        currentCount = 0;
-        countSpan.textContent = '';
-        setState('empty');
-        return;
-      }
-
-      const frag = document.createDocumentFragment();
-      images.forEach(img => frag.appendChild(renderRow(img)));
-      list.appendChild(frag);
-
-      currentCount = images.length;
-      countSpan.textContent = `${currentCount} image${currentCount === 1 ? '' : 's'}`;
-      setState('ready');
+      loadedImages = data.images || [];
+      renderList();
     } catch (err) {
       console.error('[manage] load failed', err);
       setState('error');
     }
+  }
+
+  if (sortSel) {
+    sortSel.addEventListener('change', renderList);
   }
 
   load();
