@@ -769,6 +769,23 @@
   color: var(--color-accent-light);
 }
 
+/* File-size badge — three tiers so curator can spot heavy images. */
+.adm-badge--size {
+  font-variant-numeric: tabular-nums;
+}
+.adm-badge--size-low {
+  background: rgba(154, 154, 154, 0.12);
+  color: var(--color-text-secondary);
+}
+.adm-badge--size-mid {
+  background: rgba(226, 185, 59, 0.15);
+  color: var(--color-warning);
+}
+.adm-badge--size-high {
+  background: rgba(207, 68, 68, 0.18);
+  color: #ff6b6b;
+}
+
 .adm-row__actions {
   display: flex;
   gap: var(--space-sm);

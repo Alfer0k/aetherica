@@ -65,6 +65,8 @@ export const onRequestPost = async ({ request, env }) => {
   const prefix = randomPrefix();
   const now    = Math.floor(Date.now() / 1000);
   const fullKey = `${prefix}/full.${fullFormat}`;
+  // Sum of bytes the curator will end up paying R2 storage for.
+  const totalBytes = (thumb.size || 0) + (isFile(med) ? (med.size || 0) : 0) + (full.size || 0);
 
   try {
     await putR2(env, `${prefix}/thumb.webp`, thumb, 'image/webp');
@@ -79,9 +81,9 @@ export const onRequestPost = async ({ request, env }) => {
   let imageId;
   try {
     const res = await env.DB.prepare(
-      `INSERT INTO images (r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, curator_rating, created_at)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`
-    ).bind(prefix, title, sourceUrl, nsfw, featured, width, height, fullFormat, curatorRating, now).run();
+      `INSERT INTO images (r2_prefix, title, source_url, nsfw, featured, likes_count, width, height, full_format, curator_rating, total_bytes, created_at)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)`
+    ).bind(prefix, title, sourceUrl, nsfw, featured, width, height, fullFormat, curatorRating, totalBytes, now).run();
     imageId = res.meta.last_row_id;
   } catch (err) {
     // Try to clean up R2 objects we just wrote so we don't leave orphans.
