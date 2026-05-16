@@ -555,6 +555,43 @@
 .aeth-grid[data-state="empty"]   .aeth-grid__state--empty   { display: block; }
 .aeth-grid[data-state="error"]   .aeth-grid__state--error   { display: block; color: var(--color-error); }
 
+/* ---- Load more ---- */
+
+.aeth-loadmore {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2xl) 0 var(--space-lg);
+}
+
+.aeth-loadmore[hidden] { display: none; }
+
+.aeth-loadmore__btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: var(--space-sm) var(--space-xl);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out);
+}
+
+.aeth-loadmore__btn:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.aeth-loadmore__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* ---- Card (masonry cell) ---- */
 
 .aeth-card {

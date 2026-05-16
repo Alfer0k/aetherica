@@ -13,6 +13,8 @@ const toggleBtn  = document.getElementById('aeth-nsfw-toggle');
 const filterBox  = document.getElementById('aeth-filter');
 const filterChips    = document.getElementById('aeth-filter-chips');
 const filterClearAll = document.getElementById('aeth-filter-clear');
+const loadMoreWrap = document.getElementById('aeth-loadmore');
+const loadMoreBtn  = document.getElementById('aeth-loadmore-btn');
 
 const filterBtn       = document.getElementById('aeth-filter-btn');
 const filterBtnCount  = document.getElementById('aeth-filter-btn-count');
@@ -207,26 +209,41 @@ function renderCard(img, filter, ratingMin) {
   return a;
 }
 
-async function load() {
-  setState('loading');
+// Pagination state — module-local. Reset by load(), advanced by loadMore().
+let currentOffset = 0;
+let hasMore = false;
+let isLoadingMore = false;
+
+async function fetchPage(offset) {
   const filter = getActiveFilter();
   const ratingMin = getActiveRatingMin();
+  const params = new URLSearchParams();
+  params.set('limit',  String(PAGE_SIZE));
+  params.set('offset', String(offset));
+  if (!nsfwOn()) params.set('nsfw', 'off');
+  const s = serializeFilter(filter);
+  if (s) params.set('tags', s);
+  if (ratingMin > 0) params.set('rating_min', String(ratingMin));
+
+  const res = await fetch(`/api/aetherica/images?${params.toString()}`, {
+    headers: { 'Accept': 'application/json' },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  return { images: data.images || [], filter, ratingMin };
+}
+
+function setLoadMoreVisible(visible) {
+  loadMoreWrap.hidden = !visible;
+}
+
+async function load() {
+  setState('loading');
+  setLoadMoreVisible(false);
+  currentOffset = 0;
+  hasMore = false;
   try {
-    const params = new URLSearchParams();
-    params.set('limit',  String(PAGE_SIZE));
-    params.set('offset', '0');
-    if (!nsfwOn()) params.set('nsfw', 'off');
-    const s = serializeFilter(filter);
-    if (s) params.set('tags', s);
-    if (ratingMin > 0) params.set('rating_min', String(ratingMin));
-
-    const res = await fetch(`/api/aetherica/images?${params.toString()}`, {
-      headers: { 'Accept': 'application/json' },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const images = data.images || [];
-
+    const { images, filter, ratingMin } = await fetchPage(0);
     grid.querySelectorAll('.aeth-card').forEach(el => el.remove());
 
     if (images.length === 0) {
@@ -238,10 +255,63 @@ async function load() {
     images.forEach(img => frag.appendChild(renderCard(img, filter, ratingMin)));
     grid.appendChild(frag);
     setState('ready');
+
+    currentOffset = images.length;
+    hasMore = images.length === PAGE_SIZE;
+    setLoadMoreVisible(hasMore);
   } catch (err) {
     console.error('[aetherica] failed to load images', err);
     setState('error');
   }
+}
+
+async function loadMore() {
+  if (isLoadingMore || !hasMore) return;
+  isLoadingMore = true;
+  loadMoreBtn.disabled = true;
+  const originalText = loadMoreBtn.textContent;
+  loadMoreBtn.textContent = 'Loading…';
+  try {
+    const { images, filter, ratingMin } = await fetchPage(currentOffset);
+    if (images.length === 0) {
+      hasMore = false;
+      setLoadMoreVisible(false);
+      return;
+    }
+
+    const frag = document.createDocumentFragment();
+    images.forEach(img => frag.appendChild(renderCard(img, filter, ratingMin)));
+    grid.appendChild(frag);
+
+    currentOffset += images.length;
+    hasMore = images.length === PAGE_SIZE;
+    setLoadMoreVisible(hasMore);
+  } catch (err) {
+    console.error('[aetherica] load more failed', err);
+    // Keep the button visible so the user can retry.
+  } finally {
+    isLoadingMore = false;
+    loadMoreBtn.disabled = false;
+    loadMoreBtn.textContent = originalText;
+  }
+}
+
+if (loadMoreBtn) {
+  loadMoreBtn.addEventListener('click', loadMore);
+}
+
+// Auto-trigger when the button scrolls into view — infinite-scroll feel
+// without surrendering the visible affordance. `rootMargin` fires slightly
+// before the button is fully visible so the next page is ready when you arrive.
+if ('IntersectionObserver' in window && loadMoreWrap) {
+  const io = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting && hasMore && !isLoadingMore) {
+        loadMore();
+      }
+    }
+  }, { rootMargin: '400px 0px' });
+  io.observe(loadMoreWrap);
 }
 
 // ---------- filter panel ----------
