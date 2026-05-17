@@ -46,7 +46,15 @@
   color: var(--color-text-secondary);
 }
 
-.aeth-topbar__nsfw {
+.aeth-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-left: auto;
+}
+
+.aeth-topbar__nsfw,
+.aeth-topbar__order {
   font-family: inherit;
   font-size: var(--text-xs);
   letter-spacing: 0.15em;
@@ -62,12 +70,14 @@
               background var(--duration-fast) var(--ease-out);
 }
 
-.aeth-topbar__nsfw:hover {
+.aeth-topbar__nsfw:hover,
+.aeth-topbar__order:hover {
   color: var(--color-text-primary);
   border-color: var(--color-border-hover);
 }
 
-.aeth-topbar__nsfw[data-state="on"] {
+.aeth-topbar__nsfw[data-state="on"],
+.aeth-topbar__order[data-state="random"] {
   color: var(--color-accent-light);
   border-color: var(--color-accent);
   background: var(--color-accent-subtle);
