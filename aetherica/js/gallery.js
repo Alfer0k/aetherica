@@ -6,10 +6,12 @@
 const R2_PUBLIC_URL = 'https://pub-db6629ddb8a843f48242c0317002614e.r2.dev';
 const PAGE_SIZE = 50;
 const NSFW_KEY = 'aeth_show_nsfw';
+const ORDER_KEY = 'aeth_order_mode'; // 'random' (default) | 'newest'
 const MAX_FILTER_TAGS = 20;
 
 const grid       = document.getElementById('aeth-grid');
 const toggleBtn  = document.getElementById('aeth-nsfw-toggle');
+const orderBtn   = document.getElementById('aeth-order-toggle');
 const filterBox  = document.getElementById('aeth-filter');
 const filterChips    = document.getElementById('aeth-filter-chips');
 const filterClearAll = document.getElementById('aeth-filter-clear');
@@ -30,6 +32,10 @@ const panelRating     = document.getElementById('aeth-filter-rating');
 
 function nsfwOn() {
   return (localStorage.getItem(NSFW_KEY) || 'on') === 'on';
+}
+
+function orderMode() {
+  return localStorage.getItem(ORDER_KEY) === 'newest' ? 'newest' : 'random';
 }
 
 function setState(state) {
@@ -106,6 +112,23 @@ function renderToggle() {
 if (toggleBtn) {
   toggleBtn.addEventListener('click', () => {
     try { localStorage.setItem(NSFW_KEY, nsfwOn() ? 'off' : 'on'); } catch {}
+    window.location.reload();
+  });
+}
+
+function renderOrderToggle() {
+  if (!orderBtn) return;
+  const mode = orderMode();
+  orderBtn.dataset.state = mode;
+  orderBtn.textContent = mode === 'random' ? 'RANDOM' : 'NEWEST';
+  orderBtn.title = mode === 'random'
+    ? 'Random order — click for newest first'
+    : 'Newest first — click for random';
+}
+
+if (orderBtn) {
+  orderBtn.addEventListener('click', () => {
+    try { localStorage.setItem(ORDER_KEY, orderMode() === 'random' ? 'newest' : 'random'); } catch {}
     window.location.reload();
   });
 }
@@ -250,7 +273,9 @@ async function load() {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    shuffledImages = shuffleInPlace(data.images || []);
+    const fetched = data.images || [];
+    // Server already returns newest-first; only shuffle in random mode.
+    shuffledImages = orderMode() === 'newest' ? fetched : shuffleInPlace(fetched);
 
     grid.querySelectorAll('.aeth-card').forEach(el => el.remove());
 
@@ -455,6 +480,7 @@ panelApply.addEventListener('click', () => {
 // ---------- init ----------
 
 renderToggle();
+renderOrderToggle();
 renderBanner();
 fetchAllTags(); // fire-and-forget, panel uses it when opened
 load();
